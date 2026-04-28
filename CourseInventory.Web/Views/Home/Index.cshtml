@@ -1,0 +1,137 @@
+@inject IUiTextService T
+@{
+    ViewData["Title"] = "Home";
+    var latest = (IReadOnlyList<Inventory>)ViewBag.Latest;
+    var popular = (IReadOnlyList<Inventory>)ViewBag.Popular;
+    var tags = (IReadOnlyList<Tag>)ViewBag.Tags;
+    var totalInventories = (int)ViewBag.TotalInventories;
+    var totalItems = (int)ViewBag.TotalItems;
+    var totalUsers = (int)ViewBag.TotalUsers;
+}
+<section class="home-hero mb-4">
+    <div class="hero-copy">
+        <p class="eyebrow mb-2">@T["HomeEyebrow"]</p>
+        <h1>@T["HomeHeroTitle"]</h1>
+        <p class="text-body-secondary mb-0">@T["HomeHeroText"]</p>
+    </div>
+    <a class="btn btn-primary btn-lg glow-button" asp-controller="Inventories" asp-action="Create">@T["NewInventory"]</a>
+</section>
+
+<section class="stats-strip mb-4" aria-label="@T["GlobalStatistics"]">
+    <article class="metric stat-card reveal-up" style="--delay: 0ms">
+        <div class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h12A2.25 2.25 0 0 1 20.25 6v12A2.25 2.25 0 0 1 18 20.25H6A2.25 2.25 0 0 1 3.75 18V6Z" stroke="currentColor" stroke-width="1.8"/><path d="M8 8.25h8M8 12h8M8 15.75h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <span>@T["TotalInventories"]</span>
+        <strong class="js-count-up" data-count="@totalInventories">@totalInventories</strong>
+    </article>
+    <article class="metric stat-card reveal-up" style="--delay: 90ms">
+        <div class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M6.75 4.75h10.5l2 4.5v9A1.75 1.75 0 0 1 17.5 20H6.5a1.75 1.75 0 0 1-1.75-1.75v-9l2-4.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 9.25h14M9 13h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <span>@T["TotalItems"]</span>
+        <strong class="js-count-up" data-count="@totalItems">@totalItems</strong>
+    </article>
+    <article class="metric stat-card reveal-up" style="--delay: 180ms">
+        <div class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M15.5 19.25v-1.5A3.75 3.75 0 0 0 11.75 14h-3A3.75 3.75 0 0 0 5 17.75v1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M10.25 10.75a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19 19.25v-1.1a3.25 3.25 0 0 0-2.35-3.12M15.75 4.95a2.75 2.75 0 0 1 0 5.35" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <span>@T["TotalUsers"]</span>
+        <strong class="js-count-up" data-count="@totalUsers">@totalUsers</strong>
+    </article>
+</section>
+
+<div class="row g-4 align-items-start">
+    <section class="col-xl-8">
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2>@T["LatestInventories"]</h2>
+                    <p>@T["LatestInventoriesText"]</p>
+                </div>
+                <div class="table-toolbar">
+                    <span class="selection-count" data-selection-label>@T["SelectRows"]</span>
+                    <a class="btn btn-sm btn-outline-primary btn-soft-action" asp-controller="Inventories" asp-action="Index">@T["ViewAll"]</a>
+                </div>
+            </div>
+            <form class="js-inventory-delete-form d-none" asp-controller="Inventories" asp-action="Delete" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="" />
+            </form>
+            <div class="table-responsive">
+                <table class="table app-table table-hover align-middle js-table js-table-select premium-select-table" data-selection-scope="latest-inventories">
+                    <thead>
+                    <tr>
+                        <th class="check-col"><input class="form-check-input js-check-all" type="checkbox" aria-label="@T["SelectAllLatestInventories"]" /></th>
+                        <th>@T["Title"]</th>
+                        <th>@T["Category"]</th>
+                        <th>@T["Owner"]</th>
+                        <th class="text-end">@T["Items"]</th>
+                        <th>@T["Updated"]</th>
+                    </tr>
+                    </thead>
+                <tbody>
+                @foreach (var item in latest)
+                {
+                    <tr data-href="@Url.Action("Details", "Inventories", new { item.Id })"
+                        data-edit-href="@Url.Action("Details", "Inventories", new { item.Id })#settings"
+                        data-delete-id="@item.Id"
+                        data-row-title="@item.Title">
+                        <td class="check-col"><input class="form-check-input" type="checkbox" aria-label="@T["SelectRows"] @item.Title" /></td>
+                        <td>
+                            <div class="table-title">@item.Title</div>
+                            <div class="table-subtitle">#@item.Id</div>
+                        </td>
+                        <td>@item.Category</td>
+                        <td>@(item.Owner?.UserName ?? T["Unknown"])</td>
+                        <td class="text-end">@item.ItemCount</td>
+                        <td>@item.UpdatedAt.ToLocalTime().ToString("g")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </section>
+    <aside class="col-xl-4 d-grid gap-4">
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2>@T["TopFiveByItems"]</h2>
+                    <p>@T["TopFiveByItemsText"]</p>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table app-table compact-table table-hover align-middle js-table">
+                    <thead><tr><th>@T["Inventory"]</th><th class="text-end">@T["Items"]</th></tr></thead>
+                    <tbody>
+                    @foreach (var item in popular)
+                    {
+                        <tr data-href="@Url.Action("Details", "Inventories", new { item.Id })">
+                            <td>
+                                <div class="table-title">@item.Title</div>
+                                <div class="table-subtitle">@item.Category</div>
+                            </td>
+                            <td class="text-end"><span class="count-pill">@item.ItemCount</span></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2>@T["TagCloud"]</h2>
+                    <p>@T["TagCloudText"]</p>
+                </div>
+            </div>
+            <div class="tag-cloud">
+                @foreach (var tag in tags)
+                {
+                    <a class="tag-chip" asp-controller="Inventories" asp-action="Index" asp-route-tag="@tag.Name">@tag.Name</a>
+                }
+            </div>
+        </div>
+    </aside>
+</div>

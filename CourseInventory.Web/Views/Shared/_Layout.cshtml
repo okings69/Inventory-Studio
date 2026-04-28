@@ -1,0 +1,120 @@
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IUiTextService T
+@{
+    var currentUser = User.Identity?.IsAuthenticated == true ? await UserManager.GetUserAsync(User) : null;
+    var theme = currentUser?.PreferredTheme ?? "light";
+    var lang = currentUser?.PreferredLanguage ?? "en";
+}
+<!DOCTYPE html>
+<html lang="@lang" data-bs-theme="@theme">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - @T["Brand"]</title>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />
+</head>
+<body class="app-body">
+<header class="app-header sticky-top">
+    <nav class="navbar navbar-expand-lg app-navbar">
+        <div class="container-fluid px-3 px-lg-4">
+            <a class="navbar-brand app-brand" asp-controller="Home" asp-action="Index">
+                <span class="brand-mark">IS</span>
+                <span>Inventory Studio</span>
+            </a>
+            <button class="navbar-toggler app-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse gap-3 py-3 py-lg-0" id="mainNav">
+                <ul class="navbar-nav app-nav-links">
+                    <li class="nav-item"><a class="nav-link" asp-controller="Inventories" asp-action="Index">@T["Inventories"]</a></li>
+                    @if (SignInManager.IsSignedIn(User))
+                    {
+                        <li class="nav-item"><a class="nav-link" asp-controller="Profile" asp-action="Index">@T["Profile"]</a></li>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-controller="Admin" asp-action="Users">@T["Admin"]</a></li>
+                        }
+                    }
+                </ul>
+                <form class="app-search flex-grow-1" asp-controller="Search" asp-action="Index" method="get">
+                    <span class="search-icon">/</span>
+                    <input class="form-control" name="q" placeholder="@T["SearchPlaceholder"]" aria-label="@T["SearchPlaceholder"]" />
+                </form>
+                @if (SignInManager.IsSignedIn(User))
+                {
+                    <form class="app-preferences" asp-controller="Preferences" asp-action="Set" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                        <input type="hidden" name="language" value="@lang" />
+                        <input type="hidden" name="theme" value="@theme" />
+                        <div class="dropdown pref-dropdown">
+                            <button class="btn pref-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="@T["Language"]">
+                                @lang.ToUpperInvariant()
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end pref-menu">
+                                <li><button class="dropdown-item @(lang == "en" ? "active" : "")" type="button" data-pref-field="language" data-pref-value="en">EN</button></li>
+                                <li><button class="dropdown-item @(lang == "fr" ? "active" : "")" type="button" data-pref-field="language" data-pref-value="fr">FR</button></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown pref-dropdown">
+                            <button class="btn pref-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="@T["Theme"]">
+                                @(theme == "dark" ? T["Dark"] : T["Light"])
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end pref-menu">
+                                <li><button class="dropdown-item @(theme == "light" ? "active" : "")" type="button" data-pref-field="theme" data-pref-value="light">@T["Light"]</button></li>
+                                <li><button class="dropdown-item @(theme == "dark" ? "active" : "")" type="button" data-pref-field="theme" data-pref-value="dark">@T["Dark"]</button></li>
+                            </ul>
+                        </div>
+                    </form>
+                    <div class="dropdown">
+                        <button class="btn profile-menu dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="profile-avatar">@((currentUser?.UserName ?? "U").Substring(0, 1).ToUpperInvariant())</span>
+                            <span class="profile-name">@currentUser?.UserName</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li><a class="dropdown-item" asp-controller="Profile" asp-action="Index">@T["Profile"]</a></li>
+                            <li><hr class="dropdown-divider" /></li>
+                            <li>
+                                <form asp-controller="Account" asp-action="Logout" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button class="dropdown-item" type="submit">@T["Logout"]</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex gap-2">
+                        <a class="btn btn-outline-secondary btn-sm" asp-controller="Account" asp-action="Login">@T["Login"]</a>
+                        <a class="btn btn-primary btn-sm" asp-controller="Account" asp-action="Register">@T["Register"]</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </nav>
+</header>
+<main class="app-main container-fluid px-3 px-lg-4 py-4">
+    @if (TempData["Success"] is string ok)
+    {
+        <div class="alert alert-success app-alert">@ok</div>
+    }
+    @if (TempData["Error"] is string err)
+    {
+        <div class="alert alert-danger app-alert">@err</div>
+    }
+    @RenderBody()
+</main>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+<script src="~/js/app.js" asp-append-version="true"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

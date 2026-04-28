@@ -1,0 +1,14 @@
+@model IReadOnlyList<SearchResultItem>
+@{
+    ViewData["Title"] = "Search";
+}
+<h1 class="h3 mb-3">Search results for "@ViewBag.Query"</h1>
+<div class="list-group">
+    @foreach (var result in Model)
+    {
+        <a class="list-group-item list-group-item-action" href="@result.Url">
+            <div class="d-flex justify-content-between"><strong>@result.Title</strong><span class="badge text-bg-secondary">@result.Type</span></div>
+            <div class="small text-body-secondary">@result.Snippet</div>
+        </a>
+    }
+</div>

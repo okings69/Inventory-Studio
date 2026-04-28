@@ -1,0 +1,25 @@
+@model IReadOnlyList<ApplicationUser>
+@inject Microsoft.AspNetCore.Identity.UserManager<ApplicationUser> UserManager
+@{
+    ViewData["Title"] = "Users";
+}
+<h1 class="h3 mb-3">Users</h1>
+<table class="table table-hover align-middle">
+    <thead><tr><th>User</th><th>Email</th><th>Blocked</th><th>Admin</th><th>Actions</th></tr></thead>
+    <tbody>
+    @foreach (var user in Model)
+    {
+        <tr>
+            <td>@user.UserName</td>
+            <td>@user.Email</td>
+            <td>@user.IsBlocked</td>
+            <td>@(await UserManager.IsInRoleAsync(user, "Admin"))</td>
+            <td class="d-flex gap-2">
+                <form asp-action="ToggleBlock" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@user.Id" /><button class="btn btn-sm btn-outline-warning">Block</button></form>
+                <form asp-action="ToggleAdmin" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@user.Id" /><button class="btn btn-sm btn-outline-primary">Admin</button></form>
+                <form asp-action="Delete" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@user.Id" /><button class="btn btn-sm btn-outline-danger">Delete</button></form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

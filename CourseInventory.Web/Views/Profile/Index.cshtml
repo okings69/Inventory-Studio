@@ -1,0 +1,132 @@
+@inject IUiTextService T
+@{
+    ViewData["Title"] = T["Profile"];
+    var owned = (IReadOnlyList<Inventory>)ViewBag.Owned;
+    var writable = (IReadOnlyList<Inventory>)ViewBag.Writable;
+    var totalAccessible = owned.Count + writable.Count;
+    var lastUpdated = owned.Concat(writable).OrderByDescending(i => i.UpdatedAt).FirstOrDefault()?.UpdatedAt;
+    var userName = User.Identity?.Name ?? "User";
+    var avatar = userName.Substring(0, 1).ToUpperInvariant();
+}
+
+<section class="profile-hero mb-4">
+    <div class="profile-identity">
+        <div class="profile-hero-avatar">@avatar</div>
+        <div>
+            <p class="eyebrow mb-2">@T["ProfileWorkspace"]</p>
+            <h1>@T["Profile"]</h1>
+            <p class="text-body-secondary mb-0">@userName</p>
+        </div>
+    </div>
+    <a class="btn btn-primary glow-button" asp-controller="Inventories" asp-action="Create">@T["NewInventory"]</a>
+</section>
+
+<section class="profile-stats mb-4" aria-label="@T["ProfileSummary"]">
+    <article class="metric stat-card reveal-up" style="--delay: 0ms">
+        <div class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4.75 6A2.25 2.25 0 0 1 7 3.75h10A2.25 2.25 0 0 1 19.25 6v12A2.25 2.25 0 0 1 17 20.25H7A2.25 2.25 0 0 1 4.75 18V6Z" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <span>@T["OwnedInventories"]</span>
+        <strong class="js-count-up" data-count="@owned.Count">@owned.Count</strong>
+    </article>
+    <article class="metric stat-card reveal-up" style="--delay: 90ms">
+        <div class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M8.25 11.25V8a3.75 3.75 0 0 1 7.5 0v3.25" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M6.75 10.75h10.5A1.75 1.75 0 0 1 19 12.5v5.75A1.75 1.75 0 0 1 17.25 20H6.75A1.75 1.75 0 0 1 5 18.25V12.5a1.75 1.75 0 0 1 1.75-1.75Z" stroke="currentColor" stroke-width="1.8"/></svg>
+        </div>
+        <span>@T["WritableInventories"]</span>
+        <strong class="js-count-up" data-count="@writable.Count">@writable.Count</strong>
+    </article>
+    <article class="metric stat-card reveal-up" style="--delay: 180ms">
+        <div class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 6v6l3.75 2.25" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M20.25 12A8.25 8.25 0 1 1 12 3.75 8.25 8.25 0 0 1 20.25 12Z" stroke="currentColor" stroke-width="1.8"/></svg>
+        </div>
+        <span>@T["AccessibleInventories"]</span>
+        <strong class="js-count-up" data-count="@totalAccessible">@totalAccessible</strong>
+    </article>
+</section>
+
+<div class="row g-4 align-items-start">
+    <section class="col-xl-6">
+        <div class="panel profile-panel">
+            <div class="panel-header">
+                <div>
+                    <h2>@T["MyInventories"]</h2>
+                    <p>@T["MyInventoriesText"]</p>
+                </div>
+                <div class="profile-panel-meta">
+                    @if (lastUpdated is not null)
+                    {
+                        <span>@T["LastActivity"] @lastUpdated.Value.ToLocalTime().ToString("g")</span>
+                    }
+                </div>
+            </div>
+            <div class="profile-table-tools">
+                <div class="profile-filter">
+                    <span aria-hidden="true">/</span>
+                    <input class="form-control js-filter" placeholder="@T["FilterTable"]" aria-label="@T["FilterTable"]" />
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table app-table table-hover align-middle js-table js-sortable">
+                    <thead><tr><th>@T["Title"]</th><th>@T["Category"]</th><th>@T["Updated"]</th></tr></thead>
+                    <tbody>
+                    @foreach (var i in owned)
+                    {
+                        <tr data-href="@Url.Action("Details", "Inventories", new { i.Id })">
+                            <td>
+                                <div class="table-title">@i.Title</div>
+                                <div class="table-subtitle">#@i.Id</div>
+                            </td>
+                            <td><span class="category-pill">@i.Category</span></td>
+                            <td>@i.UpdatedAt.ToLocalTime().ToString("g")</td>
+                        </tr>
+                    }
+                    @if (!owned.Any())
+                    {
+                        <tr><td colspan="3"><div class="empty-state">@T["NoOwnedInventories"]</div></td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="col-xl-6">
+        <div class="panel profile-panel">
+            <div class="panel-header">
+                <div>
+                    <h2>@T["InventoriesICanWriteTo"]</h2>
+                    <p>@T["InventoriesICanWriteToText"]</p>
+                </div>
+            </div>
+            <div class="profile-table-tools">
+                <div class="profile-filter">
+                    <span aria-hidden="true">/</span>
+                    <input class="form-control js-filter" placeholder="@T["FilterTable"]" aria-label="@T["FilterTable"]" />
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table app-table table-hover align-middle js-table js-sortable">
+                    <thead><tr><th>@T["Title"]</th><th>@T["Category"]</th><th>@T["Updated"]</th></tr></thead>
+                    <tbody>
+                    @foreach (var i in writable)
+                    {
+                        <tr data-href="@Url.Action("Details", "Inventories", new { i.Id })">
+                            <td>
+                                <div class="table-title">@i.Title</div>
+                                <div class="table-subtitle">#@i.Id</div>
+                            </td>
+                            <td><span class="category-pill">@i.Category</span></td>
+                            <td>@i.UpdatedAt.ToLocalTime().ToString("g")</td>
+                        </tr>
+                    }
+                    @if (!writable.Any())
+                    {
+                        <tr><td colspan="3"><div class="empty-state">@T["NoWritableInventories"]</div></td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>

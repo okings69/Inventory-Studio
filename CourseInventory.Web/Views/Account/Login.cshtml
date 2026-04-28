@@ -1,0 +1,87 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Login";
+    var externalLogins = ViewBag.ExternalLogins as IEnumerable<Microsoft.AspNetCore.Authentication.AuthenticationScheme>
+        ?? Enumerable.Empty<Microsoft.AspNetCore.Authentication.AuthenticationScheme>();
+}
+
+<section class="auth-shell">
+    <div class="auth-card">
+        <aside class="auth-showcase">
+            <div class="auth-showcase-mark">IS</div>
+            <p class="eyebrow mb-2">Inventory Studio</p>
+            <h1>Welcome back</h1>
+            <p>Sign in to manage inventories, collaborate on items and keep your operational data clean.</p>
+            <div class="auth-feature-list">
+                <span>Real-time collaboration</span>
+                <span>Custom fields and IDs</span>
+                <span>Clean exports</span>
+            </div>
+        </aside>
+
+        <div class="auth-form-panel">
+            <div class="auth-form-heading">
+                <p class="eyebrow mb-2">Secure access</p>
+                <h2>Login</h2>
+                <p>Use your email or username to continue.</p>
+            </div>
+
+            <form asp-action="Login" method="post" class="auth-form needs-validation" novalidate>
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger auth-validation"></div>
+                <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+
+                <div class="auth-field">
+                    <label class="form-label" asp-for="EmailOrUserName">Email or username</label>
+                    <div class="auth-input">
+                        <span aria-hidden="true">@@</span>
+                        <input class="form-control" asp-for="EmailOrUserName" autocomplete="username" required placeholder="orian" />
+                    </div>
+                    <span class="text-danger" asp-validation-for="EmailOrUserName"></span>
+                </div>
+
+                <div class="auth-field">
+                    <label class="form-label" asp-for="Password">Password</label>
+                    <div class="auth-input">
+                        <span aria-hidden="true">*</span>
+                        <input class="form-control" asp-for="Password" autocomplete="current-password" required placeholder="Enter your password" />
+                    </div>
+                    <span class="text-danger" asp-validation-for="Password"></span>
+                </div>
+
+                <div class="auth-row">
+                    <div class="form-check">
+                        <input class="form-check-input" asp-for="RememberMe" />
+                        <label class="form-check-label" asp-for="RememberMe">Remember me</label>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary glow-button auth-submit" type="submit">Login</button>
+            </form>
+
+            @if (externalLogins.Any())
+            {
+                <div class="auth-divider"><span>or</span></div>
+                <div class="d-grid gap-2">
+                    @foreach (var provider in externalLogins)
+                    {
+                        <form asp-action="ExternalLogin" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="provider" value="@provider.Name" />
+                            <button class="btn btn-outline-secondary auth-alt-button w-100">Continue with @provider.DisplayName</button>
+                        </form>
+                    }
+                </div>
+            }
+
+            <p class="auth-switch">
+                New to Inventory Studio?
+                <a asp-controller="Account" asp-action="Register">Create an account</a>
+            </p>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

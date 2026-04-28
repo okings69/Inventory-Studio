@@ -1,0 +1,71 @@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = "Register";
+}
+
+<section class="auth-shell">
+    <div class="auth-card auth-card-register">
+        <aside class="auth-showcase">
+            <div class="auth-showcase-mark">IS</div>
+            <p class="eyebrow mb-2">Inventory Studio</p>
+            <h1>Build your workspace</h1>
+            <p>Create inventories, define categories and invite people into a polished workflow from day one.</p>
+            <div class="auth-feature-list">
+                <span>Modern inventory tables</span>
+                <span>Access control</span>
+                <span>Markdown descriptions</span>
+            </div>
+        </aside>
+
+        <div class="auth-form-panel">
+            <div class="auth-form-heading">
+                <p class="eyebrow mb-2">Start free</p>
+                <h2>Register</h2>
+                <p>Create your account and open your first inventory workspace.</p>
+            </div>
+
+            <form asp-action="Register" method="post" class="auth-form needs-validation" novalidate>
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger auth-validation"></div>
+
+                <div class="auth-field">
+                    <label class="form-label" asp-for="UserName"></label>
+                    <div class="auth-input">
+                        <span aria-hidden="true">#</span>
+                        <input class="form-control" asp-for="UserName" autocomplete="username" required placeholder="orian" />
+                    </div>
+                    <span class="text-danger" asp-validation-for="UserName"></span>
+                </div>
+
+                <div class="auth-field">
+                    <label class="form-label" asp-for="Email"></label>
+                    <div class="auth-input">
+                        <span aria-hidden="true">@@</span>
+                        <input class="form-control" asp-for="Email" autocomplete="email" required placeholder="name@example.com" />
+                    </div>
+                    <span class="text-danger" asp-validation-for="Email"></span>
+                </div>
+
+                <div class="auth-field">
+                    <label class="form-label" asp-for="Password"></label>
+                    <div class="auth-input">
+                        <span aria-hidden="true">*</span>
+                        <input class="form-control" asp-for="Password" autocomplete="new-password" required placeholder="At least 6 characters" />
+                    </div>
+                    <span class="text-danger" asp-validation-for="Password"></span>
+                </div>
+
+                <button class="btn btn-primary glow-button auth-submit" type="submit">Create account</button>
+            </form>
+
+            <p class="auth-switch">
+                Already have an account?
+                <a asp-controller="Account" asp-action="Login">Login</a>
+            </p>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

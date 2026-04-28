@@ -1,0 +1,111 @@
+@model InventoryFormViewModel
+@inject IUiTextService T
+@{
+    ViewData["Title"] = T["NewInventory"];
+}
+<section class="form-shell">
+    <div class="form-intro">
+        <p class="eyebrow mb-2">@T["InventorySetup"]</p>
+        <h1>@T["NewInventory"]</h1>
+        <p class="text-body-secondary mb-0">@T["InventorySetupText"]</p>
+    </div>
+
+    <div class="form-card">
+        <form asp-action="Create" method="post" class="needs-validation new-inventory-form" novalidate data-new-inventory-form>
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+            <div class="info-callout mb-3">
+                <strong>@T["HeadsUp"]</strong>
+                <span>@T["ConfigureAfterCreation"]</span>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label" asp-for="Title">@T["Title"]</label>
+                    <input class="form-control form-control-lg" asp-for="Title" required placeholder="Warehouse laptops 2026" />
+                    <span class="invalid-feedback">@T["TitleRequired"]</span>
+                    <span class="text-danger" asp-validation-for="Title"></span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" asp-for="Category">@T["Category"]</label>
+                    <select class="form-select form-select-lg" asp-for="Category" required>
+                        <option value="">@T["ChooseCategory"]</option>
+                        <option value="Equipment">Equipment</option>
+                        <option value="Furniture">Furniture</option>
+                        <option value="Books">Books</option>
+                        <option value="Documents">Documents</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <span class="invalid-feedback">@T["CategoryRequired"]</span>
+                    <span class="text-danger" asp-validation-for="Category"></span>
+                </div>
+
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
+                        <label class="form-label mb-0" asp-for="DescriptionMarkdown">@T["DescriptionMarkdown"]</label>
+                        <span class="form-hint">@T["LivePreview"]</span>
+                    </div>
+                    <div class="markdown-editor">
+                        <textarea class="form-control" asp-for="DescriptionMarkdown" rows="8" placeholder="Describe scope, ownership, audit notes or intake rules."></textarea>
+                        <div class="markdown-preview markdown" id="markdownPreview">@T["PreviewAppearsAsYouType"]</div>
+                    </div>
+                    <span class="text-danger" asp-validation-for="DescriptionMarkdown"></span>
+                </div>
+
+                <div class="col-md-7">
+                    <label class="form-label" asp-for="ImageUrl">@T["ImageUrl"]</label>
+                    <input class="form-control" asp-for="ImageUrl" type="url" placeholder="https://example.com/inventory-cover.jpg" />
+                    <span class="invalid-feedback">@T["InvalidImageUrl"]</span>
+                    <span class="text-danger" asp-validation-for="ImageUrl"></span>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">@T["ImagePreview"]</label>
+                    <div class="image-preview" id="imagePreview" data-empty-text="@T["NoImageUrl"]" data-invalid-text="@T["InvalidImageUrl"]">@T["NoImageUrl"]</div>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label" asp-for="StatusOptions">Status dropdown options</label>
+                    <input class="form-control" asp-for="StatusOptions" placeholder="Available, In use, Broken" />
+                    <div class="form-text">Comma-separated values used in the item status select.</div>
+                    <span class="text-danger" asp-validation-for="StatusOptions"></span>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label" asp-for="Tags">@T["Tags"]</label>
+                    <input type="hidden" asp-for="Tags" data-tags-hidden />
+                    <div class="tag-input-shell">
+                        <div class="tag-badges" data-tag-badges></div>
+                        <input class="tag-entry-input" type="text" data-tag-input autocomplete="off" placeholder="@T["AddTagPlaceholder"]" />
+                        <div class="tag-suggestions" data-tag-suggestions hidden></div>
+                    </div>
+                    <span class="text-danger" asp-validation-for="Tags"></span>
+                </div>
+
+                <div class="col-12">
+                    <div class="switch-row">
+                        <div>
+                            <label class="form-check-label fw-semibold" asp-for="IsPublic">@T["PublicWriteAccess"]</label>
+                            <div class="text-body-secondary small">@T["PublicWriteAccessHelp"]</div>
+                        </div>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" asp-for="IsPublic" role="switch" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 d-flex flex-wrap justify-content-end gap-2 pt-2">
+                    <a class="btn btn-outline-secondary" asp-controller="Inventories" asp-action="Index">@T["Cancel"]</a>
+                    <button class="btn btn-primary px-4" type="submit" data-submit-button disabled>
+                        <span class="submit-label">@T["CreateInventory"]</span>
+                        <span class="submit-spinner spinner-border spinner-border-sm d-none" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/new-inventory.js" asp-append-version="true"></script>
+}

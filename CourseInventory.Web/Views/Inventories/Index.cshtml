@@ -1,0 +1,193 @@
+@model IReadOnlyList<Inventory>
+@inject IUiTextService T
+@{
+    ViewData["Title"] = T["Inventories"];
+    var currentQuery = Context.Request.Query["q"].ToString();
+    var currentAccess = Context.Request.Query["accessFilter"].ToString();
+}
+
+<section class="inventory-page">
+    <div class="inventory-page-hero mb-4">
+        <div>
+            <p class="eyebrow mb-2">@T["InventoryDirectory"]</p>
+            <h1>@T["Inventories"]</h1>
+            <p class="text-body-secondary mb-0">@T["InventoryDirectoryText"]</p>
+        </div>
+        <a class="btn btn-primary glow-button" asp-action="Create">@T["NewInventory"]</a>
+    </div>
+
+    <div class="panel inventory-table-panel">
+        <div class="panel-header">
+            <div>
+                <h2>@T["Inventories"]</h2>
+                <p>@T["InventoryTableText"]</p>
+            </div>
+            <div class="inventory-view-tools">
+                <span class="selection-count" data-inventory-selection-label>@T["SelectRows"]</span>
+                <div class="view-toggle" role="tablist" aria-label="Inventory view mode">
+                    <button class="btn btn-sm btn-outline-secondary is-active" type="button" data-view-mode="table" aria-pressed="true">Table</button>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-view-mode="visual" aria-pressed="false">Visuel</button>
+                </div>
+            </div>
+        </div>
+
+        <form class="inventory-filters" method="get">
+            <div class="inventory-filter-search">
+                <span aria-hidden="true">/</span>
+                <input class="form-control" id="inventoryTextFilter" name="q" value="@currentQuery" placeholder="@T["FilterInventoriesPlaceholder"]" />
+            </div>
+            <select class="form-select" id="inventoryAccessFilter" name="accessFilter" aria-label="@T["Access"]">
+                <option value="" selected="@(string.IsNullOrWhiteSpace(currentAccess))">@T["AllAccess"]</option>
+                <option value="public" selected="@(currentAccess == "public")">Public</option>
+                <option value="private" selected="@(currentAccess == "private")">Private</option>
+            </select>
+            <button class="btn btn-outline-primary btn-soft-action" type="submit">@T["Filter"]</button>
+        </form>
+
+        <form class="inventory-bulk-toolbar" asp-action="DeleteMany" method="post" data-inventory-toolbar hidden>
+            @Html.AntiForgeryToken()
+            <div class="bulk-toolbar-meta">
+                <strong data-selected-count>0 @T["Selected"]</strong>
+                <span>@T["BulkActionsHint"]</span>
+            </div>
+            <div data-selected-inputs></div>
+            <button class="btn btn-outline-primary btn-sm" type="button" data-action="edit" disabled>@T["Edit"]</button>
+            <button class="btn btn-outline-danger btn-sm" type="submit" data-action="delete">
+                <span data-delete-label>@T["DeleteSelected"]</span>
+                <span class="spinner-border spinner-border-sm d-none" data-delete-loader aria-hidden="true"></span>
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-action="clear">@T["ClearSelection"]</button>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table app-table table-hover align-middle inventory-data-table" data-inventory-table data-page-size="10">
+                <thead>
+                <tr>
+                    <th class="check-col">
+                        <input class="form-check-input" type="checkbox" data-select-all aria-label="@T["SelectRows"]" />
+                    </th>
+                    <th><button class="table-sort-button" type="button" data-sort="title">@T["Title"]</button></th>
+                    <th><button class="table-sort-button" type="button" data-sort="category">@T["Category"]</button></th>
+                    <th><button class="table-sort-button" type="button" data-sort="owner">@T["Owner"]</button></th>
+                    <th class="text-end">@T["Items"]</th>
+                    <th>@T["Tags"]</th>
+                    <th>@T["Access"]</th>
+                    <th><button class="table-sort-button" type="button" data-sort="updated">@T["Updated"]</button></th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var item in Model)
+                {
+                    var tags = string.Join(", ", item.InventoryTags.Select(t => t.Tag!.Name));
+                    <tr data-href="@Url.Action("Details", new { item.Id })"
+                        data-edit-href="@Url.Action("Details", new { item.Id })#settings"
+                        data-id="@item.Id"
+                        data-title="@item.Title"
+                        data-category="@item.Category"
+                        data-owner="@(item.Owner?.UserName ?? T["Unknown"])"
+                        data-access="@(item.IsPublic ? "public" : "private")"
+                        data-updated="@item.UpdatedAt.Ticks">
+                        <td class="check-col">
+                            <input class="form-check-input" type="checkbox" data-row-select value="@item.Id" aria-label="@T["SelectRows"] @item.Title" />
+                        </td>
+                        <td>
+                            <div class="table-title">@item.Title</div>
+                            <div class="table-subtitle">#@item.Id</div>
+                        </td>
+                        <td><span class="category-pill">@item.Category</span></td>
+                        <td>@(item.Owner?.UserName ?? T["Unknown"])</td>
+                        <td class="text-end">@item.ItemCount</td>
+                        <td class="inventory-tags">@(!string.IsNullOrWhiteSpace(tags) ? tags : "-")</td>
+                        <td><span class="access-badge @(item.IsPublic ? "is-public" : "is-private")">@(item.IsPublic ? "Public" : "Private")</span></td>
+                        <td>@item.UpdatedAt.ToLocalTime().ToString("g")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+            <div class="empty-state" data-empty-state hidden>@T["NoInventoriesFound"]</div>
+        </div>
+
+        <div class="inventory-visual-grid" data-inventory-visual-grid hidden>
+            @foreach (var item in Model)
+            {
+                var tags = string.Join(", ", item.InventoryTags.Select(t => t.Tag!.Name));
+                var hasImage = !string.IsNullOrWhiteSpace(item.ImageUrl);
+                <article class="inventory-visual-card"
+                         data-visual-card
+                         data-href="@Url.Action("Details", new { item.Id })"
+                         data-title="@item.Title"
+                         data-category="@item.Category"
+                         data-owner="@(item.Owner?.UserName ?? T["Unknown"])"
+                         data-access="@(item.IsPublic ? "public" : "private")">
+                    <div class="inventory-visual-media">
+                        @if (hasImage)
+                        {
+                            <img src="@item.ImageUrl" alt="@item.Title" loading="lazy" />
+                        }
+                        else
+                        {
+                            <div class="inventory-visual-placeholder">@item.Category</div>
+                        }
+                    </div>
+                    <div class="inventory-visual-body">
+                        <div class="inventory-visual-meta">
+                            <span class="category-pill">@item.Category</span>
+                            <span class="access-badge @(item.IsPublic ? "is-public" : "is-private")">@(item.IsPublic ? "Public" : "Private")</span>
+                        </div>
+                        <h3>@item.Title</h3>
+                        <p>@(!string.IsNullOrWhiteSpace(item.DescriptionMarkdown) ? item.DescriptionMarkdown.Split('\n').FirstOrDefault(line => !string.IsNullOrWhiteSpace(line) && !line.TrimStart().StartsWith("#")) ?? "Open inventory" : "Open inventory")</p>
+                        <div class="inventory-visual-stats">
+                            <span>@(item.Owner?.UserName ?? T["Unknown"])</span>
+                            <span>@item.ItemCount item(s)</span>
+                            <span>@(!string.IsNullOrWhiteSpace(tags) ? tags : "-")</span>
+                        </div>
+                    </div>
+                </article>
+            }
+            <div class="empty-state" data-visual-empty-state hidden>@T["NoInventoriesFound"]</div>
+        </div>
+
+        <div class="table-pagination">
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-page-prev>@T["Previous"]</button>
+            <span data-page-status>1 / 1</span>
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-page-next>@T["Next"]</button>
+        </div>
+    </div>
+</section>
+
+<div class="modal fade" id="deleteInventoriesModal" tabindex="-1" aria-labelledby="deleteInventoriesModalLabel" aria-hidden="true" data-confirm-delete-modal>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content app-modal">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="deleteInventoriesModalLabel">@T["ConfirmDelete"]</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0" data-delete-message>@T["ConfirmDeleteSelected"]</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                <button type="button" class="btn btn-danger" data-confirm-delete>
+                    <span data-confirm-delete-label>@T["DeleteSelected"]</span>
+                    <span class="spinner-border spinner-border-sm d-none" data-confirm-delete-loader aria-hidden="true"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Success"] is string successMessage)
+{
+    <div class="toast-container position-fixed top-0 end-0 p-3 inventory-toast-container">
+        <div class="toast inventory-toast text-bg-success border-0" role="status" aria-live="polite" aria-atomic="true" data-inventory-toast>
+            <div class="d-flex">
+                <div class="toast-body">@successMessage</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/inventory-table.js" asp-append-version="true"></script>
+}

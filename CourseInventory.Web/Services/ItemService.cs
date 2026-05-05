@@ -18,7 +18,11 @@ public interface IItemService
 public class ItemService(ApplicationDbContext db, IAccessService accessService, ICustomIdService customIds) : IItemService
 {
     public Task<InventoryItem?> GetAsync(int id) =>
-        db.InventoryItems.Include(i => i.Inventory).Include(i => i.Likes).FirstOrDefaultAsync(i => i.Id == id);
+        db.InventoryItems
+            .Include(i => i.Inventory)
+            .Include(i => i.CreatedBy)
+            .Include(i => i.Likes)
+            .FirstOrDefaultAsync(i => i.Id == id);
 
     public async Task<ServiceResult> CreateAsync(InventoryItem item, ApplicationUser actor)
     {
@@ -71,7 +75,7 @@ public class ItemService(ApplicationDbContext db, IAccessService accessService, 
     public async Task<ServiceResult> DeleteManyAsync(int inventoryId, int[] ids, ApplicationUser actor)
     {
         var access = await accessService.GetAccessAsync(inventoryId, actor);
-        if (!access.CanWrite) return ServiceResult.Fail("Access denied.");
+        if (!access.CanManage) return ServiceResult.Fail("Access denied.");
         var rows = await db.InventoryItems.Where(i => i.InventoryId == inventoryId && ids.Contains(i.Id)).ToListAsync();
         db.InventoryItems.RemoveRange(rows);
         await db.SaveChangesAsync();
@@ -82,6 +86,8 @@ public class ItemService(ApplicationDbContext db, IAccessService accessService, 
     {
         var item = await db.InventoryItems.AsNoTracking().FirstOrDefaultAsync(i => i.Id == itemId);
         if (item is null) return ServiceResult.Fail("Item not found.");
+        var access = await accessService.GetAccessAsync(item.InventoryId, actor);
+        if (!access.CanRead) return ServiceResult.Fail("Access denied.");
         var existing = await db.ItemLikes.FirstOrDefaultAsync(l => l.ItemId == itemId && l.UserId == actor.Id);
         if (existing is null) db.ItemLikes.Add(new ItemLike { ItemId = itemId, UserId = actor.Id });
         else db.ItemLikes.Remove(existing);
@@ -149,11 +155,8 @@ public class ItemService(ApplicationDbContext db, IAccessService accessService, 
             var serial = GetStringValue(item, serialField.FieldKey);
             if (string.IsNullOrWhiteSpace(serial)) return ServiceResult.Fail("Serial Number is required.");
 
-            var existingItems = await db.InventoryItems.AsNoTracking()
-                .Where(i => i.InventoryId == item.InventoryId && i.Id != item.Id)
-                .ToListAsync();
-            var duplicate = existingItems.Any(i =>
-                string.Equals(GetSerialComparable(i, serialField.FieldKey), serial, StringComparison.OrdinalIgnoreCase));
+            var comparableSerial = serial.Trim();
+            var duplicate = await HasDuplicateSerialAsync(item.InventoryId, item.Id, serialField.FieldKey, comparableSerial);
             if (duplicate) return ServiceResult.Fail("Serial Number already exists in this inventory.");
         }
 
@@ -198,7 +201,20 @@ public class ItemService(ApplicationDbContext db, IAccessService accessService, 
         _ => null
     };
 
-    private static string? GetSerialComparable(InventoryItem item, string key) => GetStringValue(item, key);
+    private Task<bool> HasDuplicateSerialAsync(int inventoryId, int currentItemId, string key, string serial) =>
+        key switch
+        {
+            "Text1" => db.InventoryItems.AsNoTracking().AnyAsync(i => i.InventoryId == inventoryId && i.Id != currentItemId && i.Text1 != null && i.Text1.ToUpper() == serial.ToUpper()),
+            "Text2" => db.InventoryItems.AsNoTracking().AnyAsync(i => i.InventoryId == inventoryId && i.Id != currentItemId && i.Text2 != null && i.Text2.ToUpper() == serial.ToUpper()),
+            "Text3" => db.InventoryItems.AsNoTracking().AnyAsync(i => i.InventoryId == inventoryId && i.Id != currentItemId && i.Text3 != null && i.Text3.ToUpper() == serial.ToUpper()),
+            "LongText1" => db.InventoryItems.AsNoTracking().AnyAsync(i => i.InventoryId == inventoryId && i.Id != currentItemId && i.LongText1 != null && i.LongText1.ToUpper() == serial.ToUpper()),
+            "LongText2" => db.InventoryItems.AsNoTracking().AnyAsync(i => i.InventoryId == inventoryId && i.Id != currentItemId && i.LongText2 != null && i.LongText2.ToUpper() == serial.ToUpper()),
+            "LongText3" => db.InventoryItems.AsNoTracking().AnyAsync(i => i.InventoryId == inventoryId && i.Id != currentItemId && i.LongText3 != null && i.LongText3.ToUpper() == serial.ToUpper()),
+            "Link1" => db.InventoryItems.AsNoTracking().AnyAsync(i => i.InventoryId == inventoryId && i.Id != currentItemId && i.Link1 != null && i.Link1.ToUpper() == serial.ToUpper()),
+            "Link2" => db.InventoryItems.AsNoTracking().AnyAsync(i => i.InventoryId == inventoryId && i.Id != currentItemId && i.Link2 != null && i.Link2.ToUpper() == serial.ToUpper()),
+            "Link3" => db.InventoryItems.AsNoTracking().AnyAsync(i => i.InventoryId == inventoryId && i.Id != currentItemId && i.Link3 != null && i.Link3.ToUpper() == serial.ToUpper()),
+            _ => Task.FromResult(false)
+        };
 
     private static IReadOnlyList<string> ParseStatusOptions(string? statusOptions) =>
         (string.IsNullOrWhiteSpace(statusOptions) ? Inventory.DefaultStatusOptions : statusOptions)

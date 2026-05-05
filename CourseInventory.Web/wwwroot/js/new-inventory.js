@@ -107,7 +107,7 @@
       return;
     }
 
-    const response = await fetch(`/Tags/Autocomplete?term=${encodeURIComponent(term)}`);
+    const response = await fetch(`/Tags/Suggest?term=${encodeURIComponent(term)}`);
     const suggestions = await response.json();
     tagSuggestions.innerHTML = '';
     suggestions.filter(item => !tags.has(item)).forEach(item => {

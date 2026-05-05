@@ -56,6 +56,23 @@ dotnet restore
 dotnet run
 ```
 
+For social login in local development, keep secrets out of Git and use user-secrets:
+
+```powershell
+cd D:\Camp\COURSE_PROJECT\CourseInventory.Web
+dotnet user-secrets set "Authentication:Google:ClientId" "YOUR_GOOGLE_CLIENT_ID"
+dotnet user-secrets set "Authentication:Google:ClientSecret" "YOUR_GOOGLE_CLIENT_SECRET"
+dotnet user-secrets set "Authentication:Facebook:AppId" "YOUR_FACEBOOK_APP_ID"
+dotnet user-secrets set "Authentication:Facebook:AppSecret" "YOUR_FACEBOOK_APP_SECRET"
+```
+
+Then restart the app. The callback URIs must also match the provider configuration:
+
+```text
+http://localhost:5158/signin-google
+http://localhost:5158/signin-facebook
+```
+
 Or use the included helper:
 
 ```powershell
@@ -91,6 +108,13 @@ dotnet run
 For local development, create `appsettings.Development.json` yourself if your PostgreSQL user, password, or port differs.
 
 For production, set `ConnectionStrings__DefaultConnection` and the external provider keys through environment variables or your hosting platform secrets.
+
+## Access rules
+
+- Inventory discussion/chat follows this rule: **authenticated user + `CanRead(inventory)`**.
+- Visitors can read only public inventories.
+- Item creation/editing still requires `CanWrite`.
+- Inventory settings, access control, custom ID management, field management, and deletes still require `CanManage`.
 
 For Render, use a managed PostgreSQL database and configure:
 

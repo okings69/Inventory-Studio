@@ -1,17 +1,22 @@
 @model InventoryDetailsViewModel
 @inject IMarkdownService Markdown
 @inject IUiTextService T
+@inject IDiscussionPresenceService Presence
 @using System.Security.Claims
 @{
     ViewData["Title"] = Model.Inventory.Title;
     var inventory = Model.Inventory;
-    var fields = inventory.Fields.OrderBy(f => f.SortOrder).ToList();
+    var fields = inventory.Fields.OrderBy(f => f.SortOrder).ThenBy(f => f.Title).ToList();
     var tableFields = fields.Where(f => f.ShowInTable).ToList();
     var tags = string.Join(", ", inventory.InventoryTags.Select(t => t.Tag!.Name));
     var items = inventory.Items.OrderByDescending(i => i.UpdatedAt).ToList();
     var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
     var canLikeItems = User.Identity?.IsAuthenticated == true;
+    var canEditItems = Model.Access.CanWrite;
+    var canDeleteItems = Model.Access.CanManage;
+    var canChat = User.Identity?.IsAuthenticated == true && Model.Access.CanRead;
     var descriptionMarkdown = TrimDuplicateHeading(inventory.Title, inventory.DescriptionMarkdown);
+    var onlineUserIds = Presence.GetOnlineUserIds(inventory.Id).ToHashSet();
 }
 
 <section class="details-shell">
@@ -22,14 +27,14 @@
             <div class="details-meta">
                 <span>@T["By"] @inventory.Owner?.UserName</span>
                 <span>@inventory.UpdatedAt.ToLocalTime().ToString("g")</span>
-                <span class="access-badge @(inventory.IsPublic ? "is-public" : "is-private")">@(inventory.IsPublic ? "Public" : "Private")</span>
+                <span class="access-badge @(inventory.IsPublic ? "is-public" : "is-private")">@(inventory.IsPublic ? T["Public"] : T["Private"])</span>
             </div>
             @if (!string.IsNullOrWhiteSpace(descriptionMarkdown))
             {
                 <div class="markdown details-description">@Html.Raw(Markdown.ToHtml(descriptionMarkdown))</div>
             }
         </div>
-        @if (Model.Access.CanWrite)
+        @if (canEditItems)
         {
             <a class="btn btn-primary glow-button" asp-controller="Items" asp-action="Create" asp-route-inventoryId="@inventory.Id">@T["AddItem"]</a>
         }
@@ -37,11 +42,14 @@
 
     <ul class="nav details-tabs" role="tablist">
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#items" type="button">@T["Items"]</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#chat" type="button">Chat</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#settings" type="button">@T["Settings"]</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#customid" type="button">@T["CustomId"]</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#fields" type="button">@T["Fields"]</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#access" type="button">@T["Access"]</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#chat" type="button">@T["Chat"]</button></li>
+        @if (Model.Access.CanManage)
+        {
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#settings" type="button">@T["Settings"]</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#customid" type="button">@T["CustomId"]</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#fields" type="button">@T["Fields"]</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#access" type="button">@T["Access"]</button></li>
+        }
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#stats" type="button">@T["Stats"]</button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#export" type="button">@T["Export"]</button></li>
     </ul>
@@ -56,41 +64,60 @@
                 <div class="panel-header">
                     <div>
                         <h2>@T["Items"]</h2>
-                        <p>@items.Count item(s), @tableFields.Count visible custom column(s).</p>
+                        <p>@string.Format(T["ItemsVisibleColumns"], items.Count, tableFields.Count)</p>
                     </div>
-                    @if (Model.Access.CanWrite)
+                    @if (canEditItems)
                     {
                         <a class="btn btn-sm btn-primary" asp-controller="Items" asp-action="Create" asp-route-inventoryId="@inventory.Id">@T["AddItem"]</a>
                     }
                 </div>
-                <form asp-controller="Items" asp-action="DeleteSelected" method="post" data-items-toolbar hidden>
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="inventoryId" value="@inventory.Id" />
-                    <div class="inventory-bulk-toolbar m-0">
-                        <div class="bulk-toolbar-meta">
-                            <strong data-items-selected-count>0 selected</strong>
-                            <span>Select one row to edit, or several rows to delete.</span>
+                @if (canEditItems)
+                {
+                    <form asp-controller="Items" asp-action="DeleteSelected" method="post" data-items-toolbar hidden>
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="inventoryId" value="@inventory.Id" />
+                        <div class="inventory-bulk-toolbar m-0">
+                            <div class="bulk-toolbar-meta">
+                                <strong data-items-selected-count data-selected-template="@T["ItemSelectedCount"]">@string.Format(T["ItemSelectedCount"], 0)</strong>
+                                <span>@T["BulkEditHint"]</span>
+                            </div>
+                            <button class="btn btn-outline-primary btn-sm" type="button" data-items-edit disabled>@T["Edit"]</button>
+                            @if (canDeleteItems)
+                            {
+                                <button class="btn btn-outline-danger btn-sm" type="submit">@T["DeleteSelected"]</button>
+                            }
+                            <button class="btn btn-outline-secondary btn-sm" type="button" data-items-clear>@T["ClearSelection"]</button>
                         </div>
-                        <button class="btn btn-outline-primary btn-sm" type="button" data-items-edit disabled>@T["Edit"]</button>
-                        @if (Model.Access.CanWrite)
-                        {
-                            <button class="btn btn-outline-danger btn-sm" type="submit">@T["DeleteSelected"]</button>
-                        }
-                        <button class="btn btn-outline-secondary btn-sm" type="button" data-items-clear>@T["ClearSelection"]</button>
-                    </div>
-                    <div data-items-hidden-inputs></div>
-                </form>
+                        <div data-items-hidden-inputs></div>
+                    </form>
+                }
                 <div class="table-responsive">
                     <table class="table app-table table-hover align-middle details-items-table" data-details-items-table>
                         <thead>
                             <tr>
-                                <th class="check-col">
-                                    <input class="form-check-input" type="checkbox" data-items-select-all aria-label="@T["SelectRows"]" />
-                                </th>
+                                @if (canEditItems)
+                                {
+                                    <th class="check-col">
+                                        <input class="form-check-input" type="checkbox" data-items-select-all aria-label="@T["SelectRows"]" />
+                                    </th>
+                                }
                                 <th>@T["CustomId"]</th>
                                 @foreach (var field in tableFields)
                                 {
-                                    <th title="@field.Description">@field.Title</th>
+                                    <th>
+                                        <span class="field-label-with-help">
+                                            <span>@field.Title</span>
+                                            @if (!string.IsNullOrWhiteSpace(field.Description))
+                                            {
+                                                <button class="field-help-trigger"
+                                                        type="button"
+                                                        data-bs-toggle="tooltip"
+                                                        data-bs-placement="top"
+                                                        title="@field.Description"
+                                                        aria-label="@field.Description">?</button>
+                                            }
+                                        </span>
+                                    </th>
                                 }
                                 <th class="text-end">@T["Likes"]</th>
                                 <th>@T["Updated"]</th>
@@ -101,10 +128,15 @@
                             {
                                 @foreach (var item in items)
                                 {
-                                    <tr data-href="@Url.Action("Details", "Items", new { item.Id })" data-id="@item.Id" tabindex="0" aria-label="Edit item @item.CustomId">
-                                        <td class="check-col" data-no-row-click>
-                                            <input class="form-check-input" type="checkbox" data-item-select value="@item.Id" />
-                                        </td>
+                                    var itemDetailsUrl = Url.Action("Details", "Items", new { item.Id });
+                                    var itemEditUrl = canEditItems ? Url.Action("Edit", "Items", new { item.Id }) : null;
+                                    <tr data-id="@item.Id" tabindex="0" aria-label="@($"{T["Details"]} {item.CustomId}")" data-href="@itemDetailsUrl" data-edit-href="@itemEditUrl">
+                                        @if (canEditItems)
+                                        {
+                                            <td class="check-col" data-no-row-click>
+                                                <input class="form-check-input" type="checkbox" data-item-select value="@item.Id" />
+                                            </td>
+                                        }
                                         <td>
                                             <div class="table-title">@item.CustomId</div>
                                             <div class="table-subtitle">#@item.Id</div>
@@ -134,7 +166,7 @@
                                                 <button
                                                     class="likes-pill likes-pill-button @(isLikedByCurrentUser ? "is-liked" : string.Empty)"
                                                     type="button"
-                                                    title="Toggle like"
+                                                    title="@T["LikeUnlike"]"
                                                     data-no-row-click
                                                     data-item-like
                                                     data-item-id="@item.Id"
@@ -148,7 +180,7 @@
                                             }
                                             else
                                             {
-                                                <span class="likes-pill" title="@item.Likes.Count like(s)">
+                                                <span class="likes-pill" title="@($"{item.Likes.Count} {T["Likes"]}")">
                                                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                                         <path d="M12 21.35 10.55 20C5.4 15.24 2 12.09 2 8.25 2 5.42 4.42 3 7.25 3c1.6 0 3.14.74 4.15 1.91A5.53 5.53 0 0 1 15.55 3C18.38 3 20.8 5.42 20.8 8.25c0 3.84-3.4 6.99-8.55 11.76L12 21.35Z" fill="currentColor" />
                                                     </svg>
@@ -158,7 +190,7 @@
                                         </td>
                                         <td>
                                             <div class="details-updated">@item.UpdatedAt.ToLocalTime().ToString("g")</div>
-                                            <div class="table-subtitle">Open to edit</div>
+                                            <div class="table-subtitle">@T["Details"]</div>
                                         </td>
                                     </tr>
                                 }
@@ -166,8 +198,8 @@
                             else
                             {
                                 <tr>
-                                    <td colspan="@(tableFields.Count + 4)" class="text-center text-body-secondary py-4">
-                                        No items found
+                                    <td colspan="@(tableFields.Count + (canEditItems ? 4 : 3))" class="text-center text-body-secondary py-4">
+                                        @T["NoItemsFound"]
                                     </td>
                                 </tr>
                             }
@@ -180,13 +212,14 @@
         <section class="tab-pane fade" id="chat" data-inventory-id="@inventory.Id">
             <div class="panel details-panel">
                 <div class="panel-header">
-                    <div><h2>Chat</h2><p>Markdown messages for this inventory.</p></div>
+                    <div><h2>@T["Chat"]</h2><p>@T["DetailsChatText"]</p></div>
                 </div>
                 <div id="chatMessages" class="chat-box details-chat">
                     @foreach (var message in inventory.Messages.OrderBy(m => m.CreatedAt))
                     {
+                        var isAuthorOnline = !string.IsNullOrWhiteSpace(message.AuthorId) && onlineUserIds.Contains(message.AuthorId);
                         <article class="chat-message">
-                            <div class="chat-avatar">@((message.Author?.UserName ?? "U").Substring(0, 1).ToUpperInvariant())</div>
+                            <div class="chat-avatar @(isAuthorOnline ? "is-online" : string.Empty)" data-chat-author-id="@message.AuthorId">@((message.Author?.UserName ?? "U").Substring(0, 1).ToUpperInvariant())</div>
                             <div class="chat-bubble">
                                 <div class="chat-meta">@message.Author?.UserName <span>@message.CreatedAt.ToLocalTime().ToString("g")</span></div>
                                 <div class="markdown">@Html.Raw(message.BodyHtml)</div>
@@ -194,7 +227,7 @@
                         </article>
                     }
                 </div>
-                @if (Model.Access.CanWrite)
+                @if (canChat)
                 {
                     <form asp-controller="Discussion" asp-action="Add" method="post" id="chatForm" class="chat-form">
                         @Html.AntiForgeryToken()
@@ -206,10 +239,12 @@
             </div>
         </section>
 
+        @if (Model.Access.CanManage)
+        {
         <section class="tab-pane fade" id="settings">
             <div class="panel details-panel">
                 <div class="panel-header">
-                    <div><h2>@T["Settings"]</h2><p>Autosave keeps title, description, category and access current.</p></div>
+                    <div><h2>@T["Settings"]</h2><p>@T["DetailsSettingsText"]</p></div>
                     <span id="autosaveStatus" class="autosave-pill">@T["AllChangesSaved"]</span>
                 </div>
                 @if (Model.Access.CanManage)
@@ -223,8 +258,17 @@
                             <div class="col-md-4"><label class="form-label">@T["Category"]</label><input class="form-control" name="Category" value="@inventory.Category" required /></div>
                             <div class="col-12"><label class="form-label">@T["DescriptionMarkdown"]</label><textarea class="form-control" name="DescriptionMarkdown" rows="5">@inventory.DescriptionMarkdown</textarea></div>
                             <div class="col-md-8"><label class="form-label">@T["ImageUrl"]</label><input class="form-control" name="ImageUrl" value="@inventory.ImageUrl" /></div>
-                            <div class="col-md-4"><label class="form-label">@T["Tags"]</label><input class="form-control" name="Tags" value="@tags" /></div>
-                            <div class="col-12"><label class="form-label">Status dropdown options</label><input class="form-control" name="StatusOptions" value="@inventory.StatusOptions" /><div class="form-text">Comma-separated values used in the item status select.</div></div>
+                            <div class="col-md-4">
+                                <label class="form-label">@T["Tags"]</label>
+                                <input type="hidden" name="Tags" value="@tags" data-settings-tags-hidden />
+                                <div class="tag-input-shell" data-settings-tags-editor>
+                                    <div class="tag-badges" data-settings-tag-badges></div>
+                                    <input class="tag-entry-input" type="text" data-settings-tag-input autocomplete="off" placeholder="@T["AddTagPlaceholder"]" />
+                                    <div class="tag-suggestions" data-settings-tag-suggestions hidden></div>
+                                </div>
+                                <noscript><input class="form-control mt-2" name="Tags" value="@tags" /></noscript>
+                            </div>
+                            <div class="col-12"><label class="form-label">@T["StatusDropdownOptions"]</label><input class="form-control" name="StatusOptions" value="@inventory.StatusOptions" /><div class="form-text">@T["StatusDropdownOptionsHelp"]</div></div>
                             <div class="col-12">
                                 <div class="switch-row">
                                     <div><strong>@T["PublicWriteAccess"]</strong><div class="text-body-secondary small">@T["PublicWriteAccessHelp"]</div></div>
@@ -245,7 +289,7 @@
         <section class="tab-pane fade" id="customid">
             <div class="panel details-panel">
                 <div class="panel-header">
-                    <div><h2>@T["CustomId"]</h2><p>Build the generated ID pattern for new items.</p></div>
+                    <div><h2>@T["CustomId"]</h2><p>@T["DetailsCustomIdText"]</p></div>
                     <code id="customIdPreview" class="custom-id-preview">@Model.CustomIdPreview</code>
                 </div>
                 @if (Model.Access.CanManage)
@@ -254,11 +298,49 @@
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="inventoryId" value="@inventory.Id" />
                         <div class="row g-2">
-                            <div class="col-md-3"><select class="form-select" name="elementType" asp-items="Html.GetEnumSelectList<CustomIdElementType>()"></select></div>
+                            <div class="col-md-4">
+                                <div class="custom-id-help-input">
+                                    <select class="form-select" name="elementType" data-customid-type-select>
+                                        @foreach (var option in Html.GetEnumSelectList<CustomIdElementType>())
+                                        {
+                                            var typeHelpKey = $"CustomIdType{option.Text}Help";
+                                            var formatHelp = option.Text is "DateTime" or "Sequence"
+                                                ? T[typeHelpKey]
+                                                : T["CustomIdFormatDefaultHelp"];
+                                            <option value="@option.Value"
+                                                    data-type-help="@T[typeHelpKey]"
+                                                    data-format-help="@formatHelp">@option.Text</option>
+                                        }
+                                    </select>
+                                    <button class="btn btn-outline-secondary custom-id-help-button"
+                                            type="button"
+                                            data-bs-toggle="popover"
+                                            data-bs-trigger="focus"
+                                            data-bs-placement="top"
+                                            data-customid-type-help
+                                            title="@T["CustomIdTypeHelpLabel"]"
+                                            data-bs-content="@T["CustomIdTypeFixedTextHelp"]"
+                                            aria-label="@T["TypeHelp"]">?</button>
+                                </div>
+                            </div>
                             <div class="col-md-3"><input class="form-control" name="fixedValue" placeholder="@T["FixedValue"]" /></div>
-                            <div class="col-md-3"><input class="form-control" name="format" placeholder="@T["Format"]" /></div>
-                            <div class="col-md-3"><button class="btn btn-outline-primary w-100">@T["AddElement"]</button></div>
+                            <div class="col-md-3">
+                                <div class="custom-id-help-input">
+                                    <input class="form-control" name="format" placeholder="@T["Format"]" />
+                                    <button class="btn btn-outline-secondary custom-id-help-button"
+                                            type="button"
+                                            data-bs-toggle="popover"
+                                            data-bs-trigger="focus"
+                                            data-bs-placement="top"
+                                            data-customid-format-help
+                                            title="@T["CustomIdFormatHelpLabel"]"
+                                            data-bs-content="@T["CustomIdFormatDefaultHelp"]"
+                                            aria-label="@T["FormatHelp"]">?</button>
+                                </div>
+                            </div>
+                            <div class="col-md-2"><button class="btn btn-outline-primary w-100">@T["AddElement"]</button></div>
                         </div>
+                        <div class="form-text mt-2">@T["CustomIdFormatHint"]</div>
                     </form>
                 }
                 <div class="builder-list">
@@ -284,7 +366,7 @@
         <section class="tab-pane fade" id="fields">
             <div class="panel details-panel">
                 <div class="panel-header">
-                    <div><h2>@T["Fields"]</h2><p>Up to three fields per type. Visible fields become item table columns.</p></div>
+                    <div><h2>@T["Fields"]</h2><p>@T["DetailsFieldsText"]</p></div>
                 </div>
                 @if (Model.Access.CanManage)
                 {
@@ -294,7 +376,7 @@
                         <div class="row g-2">
                             <div class="col-md-3"><select class="form-select" name="fieldType" asp-items="Html.GetEnumSelectList<InventoryFieldType>()"></select></div>
                             <div class="col-md-4"><input class="form-control" name="title" placeholder="@T["FieldTitle"]" required /></div>
-                            <div class="col-md-3"><input class="form-control" name="description" placeholder="Description" /></div>
+                            <div class="col-md-3"><input class="form-control" name="description" placeholder="@T["Description"]" /></div>
                             <div class="col-md-2"><button class="btn btn-outline-primary w-100">@T["AddField"]</button></div>
                         </div>
                     </form>
@@ -303,22 +385,50 @@
                     @foreach (var field in fields)
                     {
                         <article class="field-card">
-                            <div class="field-card-header">
-                                <div>
-                                    <strong>@field.Title</strong>
-                                    <span>@field.FieldType / @field.FieldKey</span>
+                            <form asp-controller="Fields" asp-action="Update" method="post" class="field-update-form">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="Id" value="@field.Id" />
+                                <input type="hidden" name="InventoryId" value="@inventory.Id" />
+                                <input type="hidden" name="FieldType" value="@field.FieldType" />
+                                <input type="hidden" name="FieldKey" value="@field.FieldKey" />
+                                <div class="field-card-header">
+                                    <div>
+                                        <strong>@field.Title</strong>
+                                        <span>@field.FieldType / @field.FieldKey</span>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-primary" type="submit">@T["Save"]</button>
                                 </div>
-                                @if (Model.Access.CanManage)
-                                {
-                                    <form asp-controller="Fields" asp-action="Delete" method="post" class="field-delete-form">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@field.Id" />
-                                        <input type="hidden" name="inventoryId" value="@inventory.Id" />
-                                        <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
-                                    </form>
-                                }
-                            </div>
-                            <p>@field.Description</p>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label">@T["FieldTitle"]</label>
+                                        <input class="form-control" name="Title" value="@field.Title" required />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">@T["Description"]</label>
+                                        <input class="form-control" name="Description" value="@field.Description" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">@T["ShowInTable"]</label>
+                                        <input type="hidden" name="ShowInTable" value="false" />
+                                        <div class="form-check form-switch field-switch-row">
+                                            <input class="form-check-input" type="checkbox" name="ShowInTable" value="true" checked="@field.ShowInTable" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">@T["SortOrder"]</label>
+                                        <input class="form-control" type="number" name="SortOrder" value="@field.SortOrder" />
+                                    </div>
+                                </div>
+                            </form>
+                            @if (Model.Access.CanManage)
+                            {
+                                <form asp-controller="Fields" asp-action="Delete" method="post" class="field-delete-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@field.Id" />
+                                    <input type="hidden" name="inventoryId" value="@inventory.Id" />
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">@T["Delete"]</button>
+                                </form>
+                            }
                         </article>
                     }
                 </div>
@@ -328,14 +438,15 @@
         <section class="tab-pane fade" id="access">
             <div class="panel details-panel">
                 <div class="panel-header">
-                    <div><h2>@T["Access"]</h2><p>Public/private status and users with write access.</p></div>
-                    <span class="access-badge @(inventory.IsPublic ? "is-public" : "is-private")">@(inventory.IsPublic ? "Public" : "Private")</span>
+                    <div><h2>@T["Access"]</h2><p>@T["DetailsAccessText"]</p></div>
+                    <span class="access-badge @(inventory.IsPublic ? "is-public" : "is-private")">@(inventory.IsPublic ? T["Public"] : T["Private"])</span>
                 </div>
                 @if (Model.Access.CanManage)
                 {
                     <form asp-controller="Access" asp-action="Grant" method="post" class="details-form access-grant-form">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="inventoryId" value="@inventory.Id" />
+                        <input type="hidden" value="@inventory.Id" data-access-inventory-id />
                         <input type="hidden" name="userId" data-access-user-id />
                         <div class="access-autocomplete">
                             <input class="form-control" data-access-search placeholder="@T["UserIdAutocomplete"]" autocomplete="off" />
@@ -363,10 +474,11 @@
                 </div>
             </div>
         </section>
+        }
 
         <section class="tab-pane fade" id="stats">
             <div class="panel details-panel">
-                <div class="panel-header"><div><h2>@T["Stats"]</h2><p>Items, likes, numeric averages and frequent values.</p></div></div>
+                <div class="panel-header"><div><h2>@T["Stats"]</h2><p>@T["DetailsStatsText"]</p></div></div>
                 <div class="stats-strip details-stats">
                     <article class="metric stat-card"><span>@T["ItemsCount"]</span><strong>@Model.Stats?.ItemCount</strong></article>
                     <article class="metric stat-card"><span>@T["Likes"]</span><strong>@Model.Stats?.TotalLikes</strong></article>
@@ -385,7 +497,7 @@
                         </table>
                     </div>
                     <div class="col-lg-6">
-                        <h3 class="h6">Frequent values</h3>
+                        <h3 class="h6">@T["FrequentValues"]</h3>
                         <div class="builder-list">
                             @foreach (var stat in Model.Stats!.FrequentTextValues)
                             {
@@ -399,7 +511,7 @@
 
         <section class="tab-pane fade" id="export">
             <div class="panel details-panel">
-                <div class="panel-header"><div><h2>@T["Export"]</h2><p>Download item data for reporting or migration.</p></div></div>
+                <div class="panel-header"><div><h2>@T["Export"]</h2><p>@T["DetailsExportText"]</p></div></div>
                 <div class="p-3"><a class="btn btn-outline-primary" asp-controller="Export" asp-action="Csv" asp-route-inventoryId="@inventory.Id">@T["ExportCsv"]</a></div>
             </div>
         </section>
@@ -419,6 +531,15 @@
         "Number1" => item.Number1,
         "Number2" => item.Number2,
         "Number3" => item.Number3,
+        "LongText1" => item.LongText1,
+        "LongText2" => item.LongText2,
+        "LongText3" => item.LongText3,
+        "Link1" => item.Link1,
+        "Link2" => item.Link2,
+        "Link3" => item.Link3,
+        "Bool1" => item.Bool1,
+        "Bool2" => item.Bool2,
+        "Bool3" => item.Bool3,
         _ => null
     };
 
@@ -427,6 +548,7 @@
         null => "-",
         string text when string.IsNullOrWhiteSpace(text) => "-",
         decimal number => number.ToString("0.##"),
+        bool boolean => boolean ? "Yes" : "No",
         _ => value.ToString() ?? "-"
     };
 

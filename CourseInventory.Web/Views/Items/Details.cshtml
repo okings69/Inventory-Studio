@@ -1,0 +1,191 @@
+@model ItemDetailsViewModel
+@inject IUiTextService T
+@using Microsoft.AspNetCore.Html
+@using CourseInventory.Web.Models.Inventory
+@using System.Security.Claims
+@{
+    ViewData["Title"] = Model.Item.CustomId ?? $"{T["InventoryItem"]} #{Model.Item.Id}";
+    var item = Model.Item;
+    var inventory = Model.Inventory;
+    var statusValue = Model.DisplayValues.FirstOrDefault(IsStatusField)?.DisplayValue;
+    var statusClass = GetStatusClass(statusValue);
+    var categoryClass = GetCategoryClass(inventory.Category);
+    var canLike = User.Identity?.IsAuthenticated == true;
+}
+
+<section class="item-detail-shell">
+    <div class="item-detail-hero">
+        <div class="category-icon @categoryClass" aria-hidden="true">
+            @RenderCategoryIcon(inventory.Category)
+        </div>
+        <div class="item-detail-hero__main">
+            <p class="eyebrow mb-2">@T["Details"]</p>
+            <h1>@(item.CustomId ?? $"#{item.Id}")</h1>
+            <div class="item-detail-meta">
+                <span>@T["Inventory"]: @inventory.Title</span>
+                <span>@T["CreatedAt"]: @item.CreatedAt.ToLocalTime().ToString("g")</span>
+                <span>@T["UpdatedAt"]: @item.UpdatedAt.ToLocalTime().ToString("g")</span>
+            </div>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(statusValue))
+        {
+            <span class="status-badge @statusClass">@statusValue</span>
+        }
+    </div>
+
+    <div class="action-toolbar">
+        <a class="btn btn-outline-secondary" asp-controller="Inventories" asp-action="Details" asp-route-id="@inventory.Id">@T["BackToInventory"]</a>
+        @if (canLike)
+        {
+            <form asp-action="ToggleLike" method="post" class="m-0">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="itemId" value="@item.Id" />
+                <input type="hidden" name="inventoryId" value="@inventory.Id" />
+                <input type="hidden" name="returnUrl" value="@Url.Action("Details", "Items", new { id = item.Id })" />
+                <button class="btn btn-outline-primary" type="submit">
+                    @(Model.IsLikedByCurrentUser ? T["Unlike"] : T["Like"]) (@item.Likes.Count)
+                </button>
+            </form>
+        }
+        @if (Model.CanWrite)
+        {
+            <a class="btn btn-primary" asp-action="Edit" asp-route-id="@item.Id">@T["Edit"]</a>
+        }
+        @if (Model.CanManage)
+        {
+            <form asp-action="Delete" method="post" class="m-0" data-confirmable-form>
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@item.Id" />
+                <button class="btn btn-outline-danger" type="submit" data-confirm-message="@T["ConfirmDelete"]">@T["Delete"]</button>
+            </form>
+        }
+    </div>
+
+    <div class="item-detail-card">
+        <div class="item-detail-card__header">
+            <div>
+                <h2>@T["Details"]</h2>
+                <p>@inventory.Category</p>
+            </div>
+            <span class="likes-pill" title="@($"{item.Likes.Count} {T["Likes"]}")">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 21.35 10.55 20C5.4 15.24 2 12.09 2 8.25 2 5.42 4.42 3 7.25 3c1.6 0 3.14.74 4.15 1.91A5.53 5.53 0 0 1 15.55 3C18.38 3 20.8 5.42 20.8 8.25c0 3.84-3.4 6.99-8.55 11.76L12 21.35Z" fill="currentColor" />
+                </svg>
+                <span>@item.Likes.Count</span>
+            </span>
+        </div>
+
+        <div class="item-detail-facts">
+            <div><span>@T["CreatedBy"]</span><strong>@(item.CreatedBy?.UserName ?? T["Unknown"])</strong></div>
+            <div><span>@T["Inventory"]</span><strong>@inventory.Title</strong></div>
+            <div><span>@T["Status"]</span><strong>@(string.IsNullOrWhiteSpace(statusValue) ? T["NoValue"] : statusValue)</strong></div>
+        </div>
+    </div>
+
+    <div class="item-detail-grid">
+        @foreach (var value in Model.DisplayValues)
+        {
+            <article class="item-detail-field">
+                <div>
+                    <h3>
+                        <span class="field-label-with-help">
+                            <span>@value.Field.Title</span>
+                            @if (!string.IsNullOrWhiteSpace(value.Field.Description))
+                            {
+                                <button class="field-help-trigger"
+                                        type="button"
+                                        data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        title="@value.Field.Description"
+                                        aria-label="@value.Field.Description">?</button>
+                            }
+                        </span>
+                    </h3>
+                    @if (!string.IsNullOrWhiteSpace(value.Field.Description))
+                    {
+                        <p>@value.Field.Description</p>
+                    }
+                </div>
+
+                @if (!value.HasValue)
+                {
+                    <span class="item-detail-empty">@T["NoValue"]</span>
+                }
+                else if (value.IsLink)
+                {
+                    <a class="item-detail-link" href="@value.DisplayValue" target="_blank" rel="noopener noreferrer">@T["OpenLink"]</a>
+                }
+                else if (value.IsBoolean)
+                {
+                    <span class="boolean-badge @(value.BooleanValue == true ? "is-yes" : "is-no")">@(value.BooleanValue == true ? T["Yes"] : T["No"])</span>
+                }
+                else if (IsStatusField(value))
+                {
+                    <span class="status-badge @GetStatusClass(value.DisplayValue)">@value.DisplayValue</span>
+                }
+                else
+                {
+                    <div class="item-detail-value">@value.DisplayValue</div>
+                }
+            </article>
+        }
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+      document.querySelectorAll('[data-confirmable-form]').forEach(form => {
+        form.addEventListener('submit', event => {
+          const message = event.submitter?.dataset.confirmMessage || '@T["ConfirmDelete"]';
+          if (!window.confirm(message)) event.preventDefault();
+        });
+      });
+    </script>
+}
+
+@functions {
+    static bool IsStatusField(ItemDisplayValueViewModel value) => IsStatusField(value.Field);
+
+    static bool IsStatusField(InventoryField field) =>
+        string.Equals(field.Title?.Trim(), "Status", StringComparison.OrdinalIgnoreCase);
+
+    static string GetStatusClass(string? status)
+    {
+        var normalized = status?.Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "available" or "active" => "status-available",
+            "in use" or "borrowed" or "archived" => "status-in-use",
+            "broken" or "lost" or "expired" => "status-broken",
+            _ => "status-unknown"
+        };
+    }
+
+    static string GetCategoryClass(string? category)
+    {
+        var normalized = category?.Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "books" => "is-books",
+            "equipment" => "is-equipment",
+            "furniture" => "is-furniture",
+            "documents" => "is-documents",
+            _ => "is-other"
+        };
+    }
+
+    static IHtmlContent RenderCategoryIcon(string? category)
+    {
+        var normalized = category?.Trim().ToLowerInvariant();
+        var path = normalized switch
+        {
+            "books" => """<path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v15.5H7.5A2.5 2.5 0 0 0 5 21V5.5Z"/><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19"/><path d="M5 18.5A2.5 2.5 0 0 1 7.5 16H19"/>""",
+            "equipment" => """<rect x="4" y="5" width="16" height="10" rx="2"/><path d="M8 19h8"/><path d="M12 15v4"/>""",
+            "furniture" => """<path d="M6 11V8a4 4 0 0 1 8 0v3"/><path d="M4 11h16v5H4z"/><path d="M6 16v4"/><path d="M18 16v4"/>""",
+            "documents" => """<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/>""",
+            _ => """<path d="M4 7h16v13H4z"/><path d="M4 7l2-4h12l2 4"/><path d="M9 12h6"/>"""
+        };
+
+        return new HtmlString($"""<svg viewBox="0 0 24 24" role="img" focusable="false">{path}</svg>""");
+    }
+}

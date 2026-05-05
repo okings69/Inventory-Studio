@@ -25,7 +25,7 @@ public class DiscussionService(ApplicationDbContext db, IAccessService access, I
     public async Task<(ServiceResult Result, DiscussionMessage? Message)> AddAsync(int inventoryId, string body, ApplicationUser actor)
     {
         var state = await access.GetAccessAsync(inventoryId, actor);
-        if (!state.CanWrite) return (ServiceResult.Fail("Access denied."), null);
+        if (!state.CanRead) return (ServiceResult.Fail("Access denied."), null);
         if (string.IsNullOrWhiteSpace(body)) return (ServiceResult.Fail("Message is empty."), null);
 
         var message = new DiscussionMessage

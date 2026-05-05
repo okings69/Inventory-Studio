@@ -15,6 +15,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<InventoryAccess> InventoryAccesses => Set<InventoryAccess>();
     public DbSet<DiscussionMessage> DiscussionMessages => Set<DiscussionMessage>();
     public DbSet<ItemLike> ItemLikes => Set<ItemLike>();
+    public DbSet<UserLoginActivity> UserLoginActivities => Set<UserLoginActivity>();
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<InventoryTag> InventoryTags => Set<InventoryTag>();
 
@@ -51,6 +52,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasIndex(l => new { l.ItemId, l.UserId })
             .IsUnique();
 
+        builder.Entity<UserLoginActivity>()
+            .HasIndex(a => new { a.UserId, a.LoggedInAt });
+
         builder.Entity<Tag>()
             .HasIndex(t => t.NormalizedName)
             .IsUnique();
@@ -67,5 +71,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasOne(t => t.Tag)
             .WithMany(t => t.InventoryTags)
             .HasForeignKey(t => t.TagId);
+
+        builder.Entity<UserLoginActivity>()
+            .HasOne(a => a.User)
+            .WithMany(u => u.LoginActivities)
+            .HasForeignKey(a => a.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -31,6 +31,11 @@
   const toastElement = document.querySelector('[data-inventory-toast]');
   const pageSize = Number(table.dataset.pageSize || 10);
   const deleteModal = modalElement && window.bootstrap ? new bootstrap.Modal(modalElement) : null;
+  const selectedTemplate = toolbar?.dataset.selectedTemplate || selectionLabel?.dataset.selectedTemplate || '{0} selected';
+  const selectedDefault = selectionLabel?.dataset.selectedDefault || 'Select rows';
+  const deleteTemplate = toolbar?.dataset.deleteTemplate || 'Delete {0} selected {1}?';
+  const inventorySingular = toolbar?.dataset.inventorySingular || 'inventory';
+  const inventoryPlural = toolbar?.dataset.inventoryPlural || 'inventories';
 
   let currentPage = 1;
   let sort = { key: 'updated', direction: 'desc' };
@@ -65,8 +70,8 @@
     rows.forEach(row => row.classList.toggle('is-selected', row.querySelector('[data-row-select]')?.checked));
 
     if (toolbar) toolbar.hidden = selected.length === 0;
-    if (selectionLabel) selectionLabel.textContent = selected.length ? `${selected.length} selected` : 'Select rows';
-    if (selectedCount) selectedCount.textContent = `${selected.length} selected`;
+    if (selectionLabel) selectionLabel.textContent = selected.length ? selectedTemplate.replace('{0}', selected.length) : selectedDefault;
+    if (selectedCount) selectedCount.textContent = selectedTemplate.replace('{0}', selected.length);
     if (editButton) editButton.disabled = selected.length !== 1;
     if (deleteButton) deleteButton.disabled = selected.length === 0;
 
@@ -192,7 +197,8 @@
     if (!confirmedDelete) {
       event.preventDefault();
       if (modalMessage) {
-        modalMessage.textContent = `Delete ${selected.length} selected ${selected.length === 1 ? 'inventory' : 'inventories'}?`;
+        const noun = selected.length === 1 ? inventorySingular : inventoryPlural;
+        modalMessage.textContent = deleteTemplate.replace('{0}', selected.length).replace('{1}', noun);
       }
       deleteModal?.show();
       return;

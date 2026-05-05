@@ -23,10 +23,13 @@
                 <p>@T["InventoryTableText"]</p>
             </div>
             <div class="inventory-view-tools">
-                <span class="selection-count" data-inventory-selection-label>@T["SelectRows"]</span>
-                <div class="view-toggle" role="tablist" aria-label="Inventory view mode">
-                    <button class="btn btn-sm btn-outline-secondary is-active" type="button" data-view-mode="table" aria-pressed="true">Table</button>
-                    <button class="btn btn-sm btn-outline-secondary" type="button" data-view-mode="visual" aria-pressed="false">Visuel</button>
+                <span class="selection-count"
+                      data-inventory-selection-label
+                      data-selected-default="@T["SelectRows"]"
+                      data-selected-template="@T["SelectedCount"]">@T["SelectRows"]</span>
+                <div class="view-toggle" role="tablist" aria-label="@T["InventoryViewMode"]">
+                    <button class="btn btn-sm btn-outline-secondary is-active" type="button" data-view-mode="table" aria-pressed="true">@T["Table"]</button>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-view-mode="visual" aria-pressed="false">@T["Visual"]</button>
                 </div>
             </div>
         </div>
@@ -38,16 +41,24 @@
             </div>
             <select class="form-select" id="inventoryAccessFilter" name="accessFilter" aria-label="@T["Access"]">
                 <option value="" selected="@(string.IsNullOrWhiteSpace(currentAccess))">@T["AllAccess"]</option>
-                <option value="public" selected="@(currentAccess == "public")">Public</option>
-                <option value="private" selected="@(currentAccess == "private")">Private</option>
+                <option value="public" selected="@(currentAccess == "public")">@T["Public"]</option>
+                <option value="private" selected="@(currentAccess == "private")">@T["Private"]</option>
             </select>
             <button class="btn btn-outline-primary btn-soft-action" type="submit">@T["Filter"]</button>
         </form>
 
-        <form class="inventory-bulk-toolbar" asp-action="DeleteMany" method="post" data-inventory-toolbar hidden>
+        <form class="inventory-bulk-toolbar"
+              asp-action="DeleteMany"
+              method="post"
+              data-inventory-toolbar
+              data-selected-template="@T["SelectedCount"]"
+              data-delete-template="@T["ConfirmDeleteCount"]"
+              data-inventory-singular="@T["InventorySingle"]"
+              data-inventory-plural="@T["InventoryPlural"]"
+              hidden>
             @Html.AntiForgeryToken()
             <div class="bulk-toolbar-meta">
-                <strong data-selected-count>0 @T["Selected"]</strong>
+                <strong data-selected-count>@string.Format(T["SelectedCount"], 0)</strong>
                 <span>@T["BulkActionsHint"]</span>
             </div>
             <div data-selected-inputs></div>
@@ -98,7 +109,7 @@
                         <td>@(item.Owner?.UserName ?? T["Unknown"])</td>
                         <td class="text-end">@item.ItemCount</td>
                         <td class="inventory-tags">@(!string.IsNullOrWhiteSpace(tags) ? tags : "-")</td>
-                        <td><span class="access-badge @(item.IsPublic ? "is-public" : "is-private")">@(item.IsPublic ? "Public" : "Private")</span></td>
+                        <td><span class="access-badge @(item.IsPublic ? "is-public" : "is-private")">@(item.IsPublic ? T["Public"] : T["Private"])</span></td>
                         <td>@item.UpdatedAt.ToLocalTime().ToString("g")</td>
                     </tr>
                 }
@@ -132,13 +143,13 @@
                     <div class="inventory-visual-body">
                         <div class="inventory-visual-meta">
                             <span class="category-pill">@item.Category</span>
-                            <span class="access-badge @(item.IsPublic ? "is-public" : "is-private")">@(item.IsPublic ? "Public" : "Private")</span>
+                            <span class="access-badge @(item.IsPublic ? "is-public" : "is-private")">@(item.IsPublic ? T["Public"] : T["Private"])</span>
                         </div>
                         <h3>@item.Title</h3>
-                        <p>@(!string.IsNullOrWhiteSpace(item.DescriptionMarkdown) ? item.DescriptionMarkdown.Split('\n').FirstOrDefault(line => !string.IsNullOrWhiteSpace(line) && !line.TrimStart().StartsWith("#")) ?? "Open inventory" : "Open inventory")</p>
+                        <p>@(!string.IsNullOrWhiteSpace(item.DescriptionMarkdown) ? item.DescriptionMarkdown.Split('\n').FirstOrDefault(line => !string.IsNullOrWhiteSpace(line) && !line.TrimStart().StartsWith("#")) ?? T["OpenInventory"] : T["OpenInventory"])</p>
                         <div class="inventory-visual-stats">
                             <span>@(item.Owner?.UserName ?? T["Unknown"])</span>
-                            <span>@item.ItemCount item(s)</span>
+                            <span>@string.Format(T["ItemsCountLabel"], item.ItemCount)</span>
                             <span>@(!string.IsNullOrWhiteSpace(tags) ? tags : "-")</span>
                         </div>
                     </div>

@@ -1,10 +1,12 @@
 @inject IUiTextService T
+@model ProfileViewModel
 @{
     ViewData["Title"] = T["Profile"];
-    var owned = (IReadOnlyList<Inventory>)ViewBag.Owned;
-    var writable = (IReadOnlyList<Inventory>)ViewBag.Writable;
-    var totalAccessible = owned.Count + writable.Count;
-    var lastUpdated = owned.Concat(writable).OrderByDescending(i => i.UpdatedAt).FirstOrDefault()?.UpdatedAt;
+    var owned = Model.Owned;
+    var writable = Model.Writable;
+    var accessible = Model.Accessible;
+    var totalAccessible = accessible.Count;
+    var lastUpdated = accessible.OrderByDescending(i => i.UpdatedAt).FirstOrDefault()?.UpdatedAt;
     var userName = User.Identity?.Name ?? "User";
     var avatar = userName.Substring(0, 1).ToUpperInvariant();
 }

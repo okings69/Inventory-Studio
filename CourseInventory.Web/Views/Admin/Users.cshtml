@@ -1,25 +1,512 @@
-@model IReadOnlyList<ApplicationUser>
-@inject Microsoft.AspNetCore.Identity.UserManager<ApplicationUser> UserManager
+@model AdminUsersViewModel
+@inject IUiTextService T
 @{
-    ViewData["Title"] = "Users";
+    ViewData["Title"] = T["Users"];
+    var selectedIndex = Model.LoginActivity
+        .Select((point, index) => new { point.Count, Index = index })
+        .LastOrDefault(point => point.Count > 0)?.Index ?? Math.Max(Model.LoginActivity.Count - 1, 0);
+    var selectedPoint = Model.LoginActivity.ElementAtOrDefault(selectedIndex);
+    var peakPoint = Model.LoginActivity.OrderByDescending(point => point.Count).FirstOrDefault();
+    var jsonOptions = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
+    var activityJson = System.Text.Json.JsonSerializer.Serialize(Model.LoginActivity, jsonOptions);
+    var chartLabelsJson = System.Text.Json.JsonSerializer.Serialize(Model.LoginActivity.Select(point => point.Label), jsonOptions);
+    var chartValuesJson = System.Text.Json.JsonSerializer.Serialize(Model.LoginActivity.Select(point => point.Count), jsonOptions);
+    var latestLoginLabel = Model.LatestLoginUser?.UserName ?? T["Never"];
+    var selectedUsersHint = "{0} " + T["Users"] + " " + T["Selected"];
 }
-<h1 class="h3 mb-3">Users</h1>
-<table class="table table-hover align-middle">
-    <thead><tr><th>User</th><th>Email</th><th>Blocked</th><th>Admin</th><th>Actions</th></tr></thead>
-    <tbody>
-    @foreach (var user in Model)
-    {
-        <tr>
-            <td>@user.UserName</td>
-            <td>@user.Email</td>
-            <td>@user.IsBlocked</td>
-            <td>@(await UserManager.IsInRoleAsync(user, "Admin"))</td>
-            <td class="d-flex gap-2">
-                <form asp-action="ToggleBlock" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@user.Id" /><button class="btn btn-sm btn-outline-warning">Block</button></form>
-                <form asp-action="ToggleAdmin" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@user.Id" /><button class="btn btn-sm btn-outline-primary">Admin</button></form>
-                <form asp-action="Delete" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@user.Id" /><button class="btn btn-sm btn-outline-danger">Delete</button></form>
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
+
+<section class="admin-users-shell">
+    <div class="inventory-page-hero admin-hero mb-4">
+        <div>
+            <p class="eyebrow mb-2">@T["AdminOverview"]</p>
+            <h1>@T["Users"]</h1>
+            <p class="mb-0 text-body-secondary">@T["AdminOverviewText"]</p>
+        </div>
+    </div>
+
+    <div class="admin-metrics mb-4">
+        <article class="panel metric stat-card">
+            <span>@T["TotalUsers"]</span>
+            <strong>@Model.TotalUsers</strong>
+        </article>
+        <article class="panel metric stat-card">
+            <span>@T["OnlineNow"]</span>
+            <strong data-metric-online>@Model.OnlineUsers</strong>
+        </article>
+        <article class="panel metric stat-card">
+            <span>@T["BlockedUsersCount"]</span>
+            <strong>@Model.BlockedUsers</strong>
+        </article>
+    </div>
+
+    <div class="panel admin-users-panel overflow-hidden mb-4"
+         data-selection-scope
+         data-selection-mode="single"
+         data-toolbar-mode="inspect"
+         data-selection-singular="@T["Selected"]"
+         data-selection-plural="@T["Selected"]"
+         data-selection-empty-hint="@T["SelectRows"]"
+         data-selection-plural-hint="@selectedUsersHint">
+        <div class="panel-header admin-panel-header">
+            <div>
+                <h2>@T["UserManagement"]</h2>
+                <p>@T["UserManagementText"]</p>
+            </div>
+            <span class="admin-users-summary" data-users-summary title="@T["OnlineThresholdHint"]">@Model.OnlineUsers @T["Online"] / @Model.OfflineUsers @T["Offline"]</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle admin-users-table mb-0">
+                <thead>
+                    <tr>
+                        <th class="check-col text-center">
+                            <input class="form-check-input js-check-all" type="checkbox" aria-label="@T["SelectRows"]" hidden />
+                        </th>
+                        <th>@T["Users"]</th>
+                        <th>@T["Email"]</th>
+                        <th>@T["Status"]</th>
+                        <th class="text-center">@T["Blocked"]</th>
+                        <th class="text-center">@T["Admin"]</th>
+                        <th>@T["LastSeen"]</th>
+                        <th>@T["LastLogin"]</th>
+                        <th>@T["Actions"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model.Users)
+                    {
+                        var disableReason = user.DisabledActionReason ?? T["CannotEditSelf"];
+                        <tr class="@(user.IsAdmin ? "admin-user-row is-admin" : "admin-user-row") @(user.IsCurrentUser ? "is-self" : string.Empty)"
+                            data-row-title="@($"{user.UserName} - {(user.IsAdmin ? T["AdminUser"] : T["RegularUser"])}")"
+                            data-user-id="@user.Id"
+                            data-user-name="@user.UserName"
+                            data-user-email="@user.Email"
+                            data-user-role="@(user.IsAdmin ? T["AdminUser"] : T["RegularUser"])"
+                            data-user-online="@user.IsOnline.ToString().ToLowerInvariant()"
+                            data-user-last-login="@(user.LastLoginAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? T["Never"])">
+                            <td class="check-col text-center">
+                                <input class="form-check-input" type="checkbox" data-row-select aria-label="@($"{T["SelectRows"]} {user.UserName}")" />
+                            </td>
+                            <td>
+                                <div class="admin-user-cell">
+                                    <span class="admin-user-avatar @(user.IsOnline ? "is-online" : string.Empty)" data-user-avatar="@user.Id">@user.UserName.Substring(0, 1).ToUpperInvariant()</span>
+                                    <div>
+                                        <div class="fw-semibold d-flex align-items-center gap-2 flex-wrap">
+                                            <span>@user.UserName</span>
+                                            @if (user.IsCurrentUser)
+                                            {
+                                                <span class="admin-inline-badge">@T["CurrentUser"]</span>
+                                            }
+                                            @if (user.IsAdmin)
+                                            {
+                                                <span class="admin-inline-badge is-admin">@T["AdminUser"]</span>
+                                            }
+                                        </div>
+                                        <div class="admin-user-meta">@T["Joined"] @user.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>@user.Email</td>
+                            <td>
+                                <span class="admin-status-badge @(user.IsOnline ? "is-online" : "is-offline")" data-user-status="@user.Id" title="@T["OnlineThresholdHint"]">
+                                    @(user.IsOnline ? T["Online"] : T["Offline"])
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <input class="form-check-input" type="checkbox" checked="@user.IsBlocked" disabled aria-label="@T["Blocked"]" />
+                            </td>
+                            <td class="text-center">
+                                <input class="form-check-input" type="checkbox" checked="@user.IsAdmin" disabled aria-label="@T["Admin"]" />
+                            </td>
+                            <td data-user-last-seen="@user.Id">@(user.LastSeenAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? T["Never"])</td>
+                            <td data-user-last-login="@user.Id">@(user.LastLoginAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? T["Never"])</td>
+                            <td>
+                                <div class="admin-actions">
+                                    <form asp-action="ToggleBlock" method="post" data-confirmable-form>
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@user.Id" />
+                                        <button class="btn btn-sm btn-outline-warning"
+                                                type="submit"
+                                                data-confirm-message="@T["ConfirmBlockUser"]"
+                                                data-confirm-title="@T["Block"]"
+                                                aria-label="@(user.CanBlock ? T["Block"] : disableReason)"
+                                                disabled="@(!user.CanBlock)">
+                                            @T["Block"]
+                                        </button>
+                                    </form>
+                                    <form asp-action="ToggleAdmin" method="post" data-confirmable-form>
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@user.Id" />
+                                        <button class="btn btn-sm btn-outline-primary"
+                                                type="submit"
+                                                data-confirm-message="@T["ConfirmRemoveAdmin"]"
+                                                data-confirm-title="@T["Admin"]"
+                                                aria-label="@(user.CanToggleAdmin ? T["Admin"] : disableReason)"
+                                                disabled="@(!user.CanToggleAdmin)">
+                                            @T["Admin"]
+                                        </button>
+                                    </form>
+                                    <form asp-action="Delete" method="post" data-confirmable-form>
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@user.Id" />
+                                        <button class="btn btn-sm btn-outline-danger"
+                                                type="submit"
+                                                data-confirm-message="@T["ConfirmDeleteUser"]"
+                                                data-confirm-title="@T["Delete"]"
+                                                aria-label="@(user.CanDelete ? T["Delete"] : disableReason)"
+                                                disabled="@(!user.CanDelete)">
+                                            @T["Delete"]
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel admin-activity-panel mb-4">
+        <div class="panel-header admin-panel-header">
+            <div>
+                <h2>@T["Last7DaysLoginActivity"]</h2>
+                <p>@T["AutoRefresh"]</p>
+            </div>
+        </div>
+        <div class="admin-activity-layout">
+            <div class="admin-activity-chart">
+                <canvas id="adminActivityChart" aria-label="@T["Last7DaysLoginActivity"]"></canvas>
+            </div>
+
+            <aside class="admin-activity-inspector"
+                   data-activity-inspector
+                   data-empty-text="@T["NoLoginsOnThisDay"]"
+                   data-online-label="@T["Online"]"
+                   data-offline-label="@T["Offline"]"
+                   data-never-label="@T["Never"]">
+                <div class="admin-activity-inspector__meta">
+                    <span class="admin-activity-inspector__label">@T["Date"]</span>
+                    <strong data-activity-date>@selectedPoint?.FullLabel</strong>
+                </div>
+                <div class="admin-activity-inspector__stats">
+                    <div class="admin-inspector-pill">
+                        <span>@T["LoginSessions"]</span>
+                        <strong data-activity-count>@(selectedPoint?.Count ?? 0)</strong>
+                    </div>
+                    <div class="admin-inspector-pill">
+                        <span>@T["MostActiveDay"]</span>
+                        <strong data-busiest-day>@(peakPoint?.Label ?? "--")</strong>
+                    </div>
+                    <div class="admin-inspector-pill">
+                        <span>@T["LiveStatus"]</span>
+                        <strong data-online-count>@Model.OnlineUsers</strong>
+                    </div>
+                    <div class="admin-inspector-pill">
+                        <span>@T["LatestLogin"]</span>
+                        <strong data-latest-login-user>@latestLoginLabel</strong>
+                    </div>
+                </div>
+                <div class="admin-activity-list-title">@T["RecentConnections"]</div>
+                <div class="admin-activity-inspector__list" data-activity-list>
+                    @if (selectedPoint?.Entries.Any() == true)
+                    {
+                        @foreach (var entry in selectedPoint.Entries)
+                        {
+                            <article class="admin-activity-entry">
+                                <div>
+                                    <strong>@entry.UserName</strong>
+                                    <span>@entry.Email</span>
+                                </div>
+                                <time>@entry.TimeLabel</time>
+                            </article>
+                        }
+                    }
+                    else
+                    {
+                        <p class="admin-activity-empty">@T["NoLoginsOnThisDay"]</p>
+                    }
+                </div>
+            </aside>
+        </div>
+    </div>
+</section>
+
+<div class="modal fade" id="adminActionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content app-modal admin-confirm-modal">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <p class="eyebrow mb-2">@T["AdminOverview"]</p>
+                    <h2 class="h4 mb-0" id="adminActionModalTitle">@T["ConfirmDelete"]</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <p class="mb-0" id="adminActionModalMessage"></p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                <button type="button" class="btn btn-primary" id="adminActionModalConfirm">@T["ConfirmDelete"]</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script>
+        (() => {
+          const inspector = document.querySelector('[data-activity-inspector]');
+          const canvas = document.getElementById('adminActivityChart');
+          const onlineMetric = document.querySelector('[data-metric-online]');
+          const summary = document.querySelector('[data-users-summary]');
+          const modalElement = document.getElementById('adminActionModal');
+          const modalTitle = document.getElementById('adminActionModalTitle');
+          const modalMessage = document.getElementById('adminActionModalMessage');
+          const modalConfirm = document.getElementById('adminActionModalConfirm');
+          const actionModal = modalElement && window.bootstrap
+            ? bootstrap.Modal.getOrCreateInstance(modalElement)
+            : null;
+          let pendingForm = null;
+          if (!inspector || !canvas || !window.Chart) return;
+
+          let activity = @Html.Raw(activityJson);
+          let visibleActivity = activity;
+          let activeIndex = @selectedIndex;
+          let selectedUserRows = [];
+          const dateEl = inspector.querySelector('[data-activity-date]');
+          const countEl = inspector.querySelector('[data-activity-count]');
+          const listEl = inspector.querySelector('[data-activity-list]');
+          const busiestDayEl = inspector.querySelector('[data-busiest-day]');
+          const onlineCountEl = inspector.querySelector('[data-online-count]');
+          const latestLoginUserEl = inspector.querySelector('[data-latest-login-user]');
+          const emptyText = inspector.dataset.emptyText || 'No login recorded on this day.';
+          const onlineLabel = inspector.dataset.onlineLabel || 'Online';
+          const offlineLabel = inspector.dataset.offlineLabel || 'Offline';
+          const neverLabel = inspector.dataset.neverLabel || 'Never';
+
+          const renderEntries = entries => {
+            if (!listEl) return;
+            if (!entries.length) {
+              listEl.innerHTML = `<p class="admin-activity-empty">${emptyText}</p>`;
+              return;
+            }
+
+            listEl.innerHTML = entries.map(entry => `
+              <article class="admin-activity-entry">
+                <div>
+                  <strong>${entry.userName}</strong>
+                  <span>${entry.email || ''}</span>
+                </div>
+                <time>${entry.timeLabel}</time>
+              </article>
+            `).join('');
+          };
+
+          const setActivePoint = index => {
+            const point = visibleActivity[index];
+            if (!point) return;
+
+            activeIndex = index;
+            if (dateEl) dateEl.textContent = point.fullLabel;
+            if (countEl) countEl.textContent = point.count;
+            renderEntries(point.entries || []);
+          };
+
+          const getVisibleActivity = () => {
+            const selectedIds = new Set(selectedUserRows.map(row => row.dataset.userId).filter(Boolean));
+            if (!selectedIds.size) return activity;
+
+            return activity.map(point => {
+              const entries = (point.entries || []).filter(entry => selectedIds.has(entry.userId));
+              return { ...point, count: entries.length, entries };
+            });
+          };
+
+          const getBusiestVisibleDay = points => points
+            .slice()
+            .sort((left, right) => right.count - left.count)[0];
+
+          const getLatestVisibleLoginLabel = points => {
+            if (selectedUserRows.length === 1) return selectedUserRows[0].dataset.userLastLogin || neverLabel;
+            for (let i = points.length - 1; i >= 0; i -= 1) {
+              const entry = points[i].entries?.[0];
+              if (entry) return `${entry.userName} ${entry.timeLabel}`;
+            }
+            return neverLabel;
+          };
+
+          const renderSelectedActivity = () => {
+            visibleActivity = getVisibleActivity();
+            const busiest = getBusiestVisibleDay(visibleActivity);
+            const bestIndex = Math.max(visibleActivity.findLastIndex?.(point => point.count > 0) ?? -1, 0);
+            const nextIndex = selectedUserRows.length ? bestIndex : Math.min(activeIndex, visibleActivity.length - 1);
+
+            chart.data.labels = visibleActivity.map(point => point.label);
+            chart.data.datasets[0].data = visibleActivity.map(point => point.count);
+            chart.update();
+
+            if (busiestDayEl) busiestDayEl.textContent = busiest?.count ? busiest.label : '--';
+            if (latestLoginUserEl) latestLoginUserEl.textContent = selectedUserRows.length
+              ? getLatestVisibleLoginLabel(visibleActivity)
+              : (latestLoginUserEl.dataset.globalLatest || latestLoginUserEl.textContent || neverLabel);
+            if (onlineCountEl && selectedUserRows.length === 1) {
+              onlineCountEl.textContent = selectedUserRows[0].dataset.userOnline === 'true' ? onlineLabel : offlineLabel;
+            } else if (onlineCountEl && selectedUserRows.length > 1) {
+              onlineCountEl.textContent = selectedUserRows.filter(row => row.dataset.userOnline === 'true').length;
+            } else if (onlineCountEl) {
+              onlineCountEl.textContent = onlineMetric?.textContent || '0';
+            }
+
+            setActivePoint(Math.min(nextIndex, visibleActivity.length - 1));
+          };
+
+          const labels = @Html.Raw(chartLabelsJson);
+          const values = @Html.Raw(chartValuesJson);
+
+          const chart = new Chart(canvas, {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [
+                {
+                  label: '@T["NumberOfLogins"]',
+                  data: values,
+                  borderColor: '#60a5fa',
+                  backgroundColor: 'rgba(96, 165, 250, 0.18)',
+                  fill: true,
+                  tension: 0.28,
+                  pointRadius: 4,
+                  pointHoverRadius: 6,
+                  pointBackgroundColor: '#111827',
+                  pointBorderColor: '#60a5fa',
+                  pointBorderWidth: 2
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: true,
+                  labels: {
+                    color: '#94a3b8',
+                    boxWidth: 18
+                  }
+                },
+                tooltip: {
+                  callbacks: {
+                    title: items => {
+                      const index = items[0]?.dataIndex ?? 0;
+                      return visibleActivity[index]?.fullLabel || items[0]?.label || '';
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  ticks: { color: '#93c5fd' },
+                  grid: { color: 'rgba(148, 163, 184, 0.12)' }
+                },
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    precision: 0,
+                    color: '#cbd5e1'
+                  },
+                  grid: { color: 'rgba(148, 163, 184, 0.12)' }
+                }
+              },
+              onHover: (_, activeElements) => {
+                if (activeElements?.length) {
+                  setActivePoint(activeElements[0].index);
+                }
+              }
+            }
+          });
+
+          const applySnapshot = snapshot => {
+            if (onlineMetric) onlineMetric.textContent = snapshot.onlineUsers;
+            if (summary) summary.textContent = `${snapshot.onlineUsers} ${onlineLabel} / ${snapshot.offlineUsers} ${offlineLabel}`;
+            if (onlineCountEl && !selectedUserRows.length) onlineCountEl.textContent = snapshot.onlineUsers;
+            if (busiestDayEl) busiestDayEl.textContent = snapshot.busiestDayLabel || '--';
+            if (latestLoginUserEl) {
+              latestLoginUserEl.dataset.globalLatest = snapshot.latestLoginUser?.userName || neverLabel;
+              if (!selectedUserRows.length) latestLoginUserEl.textContent = latestLoginUserEl.dataset.globalLatest;
+            }
+
+            (snapshot.users || []).forEach(user => {
+              const avatar = document.querySelector(`[data-user-avatar="${user.id}"]`);
+              const status = document.querySelector(`[data-user-status="${user.id}"]`);
+              const lastSeen = document.querySelector(`[data-user-last-seen="${user.id}"]`);
+              const lastLogin = document.querySelector(`[data-user-last-login="${user.id}"]`);
+              const row = document.querySelector(`[data-user-id="${user.id}"]`);
+
+              avatar?.classList.toggle('is-online', user.isOnline);
+              if (row) {
+                row.dataset.userOnline = user.isOnline ? 'true' : 'false';
+                row.dataset.userLastLogin = user.lastLogin || neverLabel;
+              }
+              if (status) {
+                status.classList.toggle('is-online', user.isOnline);
+                status.classList.toggle('is-offline', !user.isOnline);
+                status.textContent = user.isOnline ? onlineLabel : offlineLabel;
+              }
+              if (lastSeen) lastSeen.textContent = user.lastSeen || neverLabel;
+              if (lastLogin) lastLogin.textContent = user.lastLogin || neverLabel;
+            });
+
+            if (Array.isArray(snapshot.loginActivity) && snapshot.loginActivity.length === activity.length) {
+              activity = snapshot.loginActivity;
+              renderSelectedActivity();
+            }
+          };
+
+          const refreshSnapshot = async () => {
+            try {
+              const response = await fetch('@Url.Action("UsersSnapshot", "Admin")', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+              });
+              if (!response.ok) return;
+              applySnapshot(await response.json());
+            } catch {
+            }
+          };
+
+          document.querySelectorAll('[data-confirmable-form]').forEach(form => {
+            form.addEventListener('submit', event => {
+              const button = event.submitter;
+              const message = button?.dataset.confirmMessage;
+              const title = button?.dataset.confirmTitle;
+              if (!message || !actionModal) return;
+
+              event.preventDefault();
+              pendingForm = form;
+              if (modalTitle) modalTitle.textContent = title || '@T["ConfirmDelete"]';
+              if (modalMessage) modalMessage.textContent = message;
+              actionModal.show();
+            });
+          });
+
+          modalConfirm?.addEventListener('click', () => {
+            if (!pendingForm) return;
+            const form = pendingForm;
+            pendingForm = null;
+            actionModal?.hide();
+            HTMLFormElement.prototype.submit.call(form);
+          });
+
+          document.addEventListener('table-selection-changed', event => {
+            if (!event.detail?.scope?.classList.contains('admin-users-panel')) return;
+            selectedUserRows = event.detail.rows || [];
+            renderSelectedActivity();
+          });
+
+          if (latestLoginUserEl) latestLoginUserEl.dataset.globalLatest = latestLoginUserEl.textContent || neverLabel;
+          setActivePoint(activeIndex);
+          window.setInterval(refreshSnapshot, 10000);
+        })();
+    </script>
+}

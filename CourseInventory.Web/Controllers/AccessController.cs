@@ -9,7 +9,17 @@ namespace CourseInventory.Web.Controllers;
 [Authorize]
 public class AccessController(IAccessService access, UserManager<ApplicationUser> users) : Controller
 {
-    public async Task<IActionResult> Users(string term) => Json((await access.FindUsersAsync(term)).Select(u => new { u.Id, u.UserName, u.Email }));
+    public async Task<IActionResult> Users(int inventoryId, string term)
+    {
+        var actor = (await users.GetUserAsync(User))!;
+        var accessState = await access.GetAccessAsync(inventoryId, actor);
+        if (!accessState.CanManage)
+        {
+            return Forbid();
+        }
+
+        return Json((await access.FindUsersAsync(term)).Select(u => new { u.Id, u.UserName, u.Email }));
+    }
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Grant(int inventoryId, string userId)

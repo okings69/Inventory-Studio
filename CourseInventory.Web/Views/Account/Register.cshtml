@@ -1,35 +1,50 @@
 @model RegisterViewModel
+@inject IUiTextService T
 @{
-    ViewData["Title"] = "Register";
+    ViewData["Title"] = T["Register"];
+    var externalLogins = ViewBag.ExternalLogins as IEnumerable<Microsoft.AspNetCore.Authentication.AuthenticationScheme>
+        ?? Enumerable.Empty<Microsoft.AspNetCore.Authentication.AuthenticationScheme>();
+    var externalProviderMessages = ViewBag.ExternalProviderMessages as IEnumerable<string>
+        ?? Enumerable.Empty<string>();
 }
 
 <section class="auth-shell">
     <div class="auth-card auth-card-register">
         <aside class="auth-showcase">
             <div class="auth-showcase-mark">IS</div>
-            <p class="eyebrow mb-2">Inventory Studio</p>
-            <h1>Build your workspace</h1>
-            <p>Create inventories, define categories and invite people into a polished workflow from day one.</p>
+            <p class="eyebrow mb-2">@T["Brand"]</p>
+            <h1>@T["BuildYourWorkspace"]</h1>
+            <p>@T["BuildYourWorkspaceText"]</p>
             <div class="auth-feature-list">
-                <span>Modern inventory tables</span>
-                <span>Access control</span>
-                <span>Markdown descriptions</span>
+                <span>@T["ModernInventoryTables"]</span>
+                <span>@T["AccessControl"]</span>
+                <span>@T["MarkdownDescriptions"]</span>
             </div>
         </aside>
 
         <div class="auth-form-panel">
             <div class="auth-form-heading">
-                <p class="eyebrow mb-2">Start free</p>
-                <h2>Register</h2>
-                <p>Create your account and open your first inventory workspace.</p>
+                <p class="eyebrow mb-2">@T["StartFree"]</p>
+                <h2>@T["Register"]</h2>
+                <p>@T["RegisterText"]</p>
             </div>
+
+            @if (externalProviderMessages.Any())
+            {
+                <div class="alert alert-info auth-provider-note" role="status">
+                    @foreach (var message in externalProviderMessages)
+                    {
+                        <div>@message</div>
+                    }
+                </div>
+            }
 
             <form asp-action="Register" method="post" class="auth-form needs-validation" novalidate>
                 @Html.AntiForgeryToken()
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger auth-validation"></div>
 
                 <div class="auth-field">
-                    <label class="form-label" asp-for="UserName"></label>
+                    <label class="form-label" asp-for="UserName">@T["UserName"]</label>
                     <div class="auth-input">
                         <span aria-hidden="true">#</span>
                         <input class="form-control" asp-for="UserName" autocomplete="username" required placeholder="orian" />
@@ -38,7 +53,7 @@
                 </div>
 
                 <div class="auth-field">
-                    <label class="form-label" asp-for="Email"></label>
+                    <label class="form-label" asp-for="Email">@T["Email"]</label>
                     <div class="auth-input">
                         <span aria-hidden="true">@@</span>
                         <input class="form-control" asp-for="Email" autocomplete="email" required placeholder="name@example.com" />
@@ -47,20 +62,83 @@
                 </div>
 
                 <div class="auth-field">
-                    <label class="form-label" asp-for="Password"></label>
+                    <label class="form-label" asp-for="Password">@T["Password"]</label>
                     <div class="auth-input">
                         <span aria-hidden="true">*</span>
-                        <input class="form-control" asp-for="Password" autocomplete="new-password" required placeholder="At least 6 characters" />
+                        <input class="form-control"
+                               asp-for="Password"
+                               autocomplete="new-password"
+                               required
+                               placeholder="@T["AtLeastSixCharacters"]"
+                               data-password-input />
+                        <button class="auth-password-toggle"
+                                type="button"
+                                data-password-toggle
+                                data-show-label="@T["ShowPassword"]"
+                                data-hide-label="@T["HidePassword"]"
+                                aria-label="@T["ShowPassword"]"
+                                aria-pressed="false">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+                                <circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8" />
+                            </svg>
+                        </button>
                     </div>
                     <span class="text-danger" asp-validation-for="Password"></span>
                 </div>
 
-                <button class="btn btn-primary glow-button auth-submit" type="submit">Create account</button>
+                <button class="btn btn-primary glow-button auth-submit" type="submit">@T["CreateAccount"]</button>
             </form>
 
+            @if (externalLogins.Any())
+            {
+                <div class="auth-divider"><span>@T["Or"]</span></div>
+                <div class="d-grid gap-2">
+                    @foreach (var provider in externalLogins)
+                    {
+                        var isGoogle = string.Equals(provider.Name, "Google", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(provider.DisplayName, "Google", StringComparison.OrdinalIgnoreCase);
+                        var isFacebook = string.Equals(provider.Name, "Facebook", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(provider.DisplayName, "Facebook", StringComparison.OrdinalIgnoreCase);
+                        var buttonText = isGoogle
+                            ? $"{T["ContinueWith"]} Google"
+                            : isFacebook
+                                ? $"{T["ContinueWith"]} Facebook"
+                                : $"{T["ContinueWith"]} {provider.DisplayName}";
+
+                        <form asp-action="ExternalLogin" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="provider" value="@provider.Name" />
+                            <button class="btn @(isGoogle ? "btn-google" : isFacebook ? "btn-facebook" : "btn-outline-secondary") auth-alt-button w-100">
+                                @if (isGoogle)
+                                {
+                                    <span class="provider-mark provider-mark-google" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" focusable="false">
+                                            <path fill="#EA4335" d="M12 10.2v3.9h5.4c-.2 1.2-.9 2.2-1.9 2.9l3 2.3c1.8-1.6 2.8-4 2.8-6.8 0-.7-.1-1.5-.2-2.2H12Z"/>
+                                            <path fill="#34A853" d="M12 21c2.6 0 4.8-.9 6.4-2.3l-3-2.3c-.8.6-2 .9-3.4.9-2.6 0-4.7-1.7-5.4-4h-3.1v2.4A9.7 9.7 0 0 0 12 21Z"/>
+                                            <path fill="#4A90E2" d="M6.6 13.3A5.8 5.8 0 0 1 6.3 12c0-.5.1-.9.2-1.3V8.3H3.4A9.3 9.3 0 0 0 2.4 12c0 1.5.4 2.9 1 4.1l3.2-2.8Z"/>
+                                            <path fill="#FBBC05" d="M12 6.8c1.4 0 2.6.5 3.6 1.4l2.7-2.7C16.8 4 14.6 3 12 3 8.2 3 4.9 5.2 3.4 8.3l3.1 2.4c.7-2.3 2.8-3.9 5.5-3.9Z"/>
+                                        </svg>
+                                    </span>
+                                }
+                                else if (isFacebook)
+                                {
+                                    <span class="provider-mark provider-mark-facebook" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" focusable="false">
+                                            <path fill="currentColor" d="M13.3 21v-7h2.4l.4-2.8h-2.8V9.4c0-.8.2-1.4 1.4-1.4H16V5.4c-.3 0-1.1-.1-2.1-.1-2.1 0-3.5 1.3-3.5 3.6v2.1H8v2.8h2.3v7h3Z"/>
+                                        </svg>
+                                    </span>
+                                }
+                                @buttonText
+                            </button>
+                        </form>
+                    }
+                </div>
+            }
+
             <p class="auth-switch">
-                Already have an account?
-                <a asp-controller="Account" asp-action="Login">Login</a>
+                @T["AlreadyHaveAccount"]
+                <a asp-controller="Account" asp-action="Login">@T["Login"]</a>
             </p>
         </div>
     </div>
@@ -68,4 +146,21 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            document.querySelectorAll('[data-password-toggle]').forEach(button => {
+                const wrapper = button.closest('.auth-input');
+                const input = wrapper?.querySelector('[data-password-input]');
+                if (!input) return;
+
+                button.addEventListener('click', () => {
+                    const isPassword = input.type === 'password';
+                    input.type = isPassword ? 'text' : 'password';
+                    button.setAttribute('aria-pressed', isPassword.toString().toLowerCase());
+                    button.setAttribute('aria-label', isPassword ? button.dataset.hideLabel : button.dataset.showLabel);
+                    button.classList.toggle('is-active', isPassword);
+                });
+            });
+        })();
+    </script>
 }

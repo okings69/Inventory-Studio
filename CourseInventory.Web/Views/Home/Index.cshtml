@@ -1,6 +1,6 @@
 @inject IUiTextService T
 @{
-    ViewData["Title"] = "Home";
+    ViewData["Title"] = T["Home"];
     var latest = (IReadOnlyList<Inventory>)ViewBag.Latest;
     var popular = (IReadOnlyList<Inventory>)ViewBag.Popular;
     var tags = (IReadOnlyList<Tag>)ViewBag.Tags;

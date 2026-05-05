@@ -3,6 +3,7 @@ using CourseInventory.Web.Models.Inventory;
 namespace CourseInventory.Web.Services;
 
 public record AccessState(bool CanRead, bool CanWrite, bool CanManage, bool IsAdmin);
+public record AccessScope(bool IsAuthenticated, bool IsAdmin, string? UserId);
 public record ServiceResult(bool Success, string? Error = null)
 {
     public static ServiceResult Ok() => new(true);

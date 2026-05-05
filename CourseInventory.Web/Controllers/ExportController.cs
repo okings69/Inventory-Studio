@@ -1,21 +1,31 @@
 using System.Globalization;
 using System.Text;
 using CourseInventory.Web.Data;
+using CourseInventory.Web.Models;
 using CourseInventory.Web.Models.Inventory;
+using CourseInventory.Web.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CourseInventory.Web.Controllers;
 
-public class ExportController(ApplicationDbContext db) : Controller
+public class ExportController(
+    ApplicationDbContext db,
+    IAccessService access,
+    UserManager<ApplicationUser> users) : Controller
 {
-    private static string ExcelDelimiter =>
-        string.IsNullOrWhiteSpace(CultureInfo.CurrentCulture.TextInfo.ListSeparator)
-            ? ";"
-            : CultureInfo.CurrentCulture.TextInfo.ListSeparator;
+    private const string ExcelDelimiter = ";";
 
     public async Task<IActionResult> Csv(int inventoryId)
     {
+        var user = User.Identity?.IsAuthenticated == true ? await users.GetUserAsync(User) : null;
+        var accessState = await access.GetAccessAsync(inventoryId, user);
+        if (!accessState.CanRead)
+        {
+            return user is null ? NotFound() : Forbid();
+        }
+
         var inventory = await db.Inventories.AsNoTracking()
             .FirstOrDefaultAsync(i => i.Id == inventoryId);
         if (inventory is null)
@@ -40,6 +50,7 @@ public class ExportController(ApplicationDbContext db) : Controller
 
         var rows = new List<string>
         {
+            $"sep={ExcelDelimiter}",
             BuildCsvRow([
                 "Id",
                 "Custom ID",
@@ -142,7 +153,7 @@ public class ExportController(ApplicationDbContext db) : Controller
 
     private static string EscapeCsvValue(string? value)
     {
-        var text = value ?? string.Empty;
+        var text = ProtectExcelFormula(value ?? string.Empty);
         var mustQuote = text.Contains(ExcelDelimiter, StringComparison.Ordinal)
             || text.Contains('"')
             || text.Contains('\r')
@@ -154,6 +165,18 @@ public class ExportController(ApplicationDbContext db) : Controller
         }
 
         return $"\"{text.Replace("\"", "\"\"")}\"";
+    }
+
+    private static string ProtectExcelFormula(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return value;
+        }
+
+        return value[0] is '=' or '+' or '-' or '@'
+            ? $"'{value}"
+            : value;
     }
 
     private static string SanitizeFileName(string title)

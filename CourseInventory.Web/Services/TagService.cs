@@ -23,18 +23,26 @@ public class TagService(ApplicationDbContext db) : ITagService
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(12)
             .ToList();
+        var normalizedNames = names.Select(Normalize).ToArray();
 
         var current = await db.InventoryTags.Where(t => t.InventoryId == inventoryId).ToListAsync();
         db.InventoryTags.RemoveRange(current);
 
-        foreach (var name in names)
+        var existingTags = normalizedNames.Length == 0
+            ? new Dictionary<string, Tag>(StringComparer.OrdinalIgnoreCase)
+            : await db.Tags
+                .Where(t => normalizedNames.Contains(t.NormalizedName))
+                .ToDictionaryAsync(t => t.NormalizedName, StringComparer.OrdinalIgnoreCase);
+
+        for (var i = 0; i < names.Count; i++)
         {
-            var normalized = Normalize(name);
-            var tag = await db.Tags.FirstOrDefaultAsync(t => t.NormalizedName == normalized);
-            if (tag is null)
+            var name = names[i];
+            var normalized = normalizedNames[i];
+            if (!existingTags.TryGetValue(normalized, out var tag))
             {
                 tag = new Tag { Name = name, NormalizedName = normalized };
                 db.Tags.Add(tag);
+                existingTags[normalized] = tag;
             }
             db.InventoryTags.Add(new InventoryTag { InventoryId = inventoryId, Tag = tag });
         }

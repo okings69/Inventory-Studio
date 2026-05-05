@@ -1,3 +1,28 @@
+const lang = document.documentElement.lang?.toLowerCase() || 'en';
+const uiText = lang.startsWith('fr')
+  ? {
+      selectRows: 'Sélectionner',
+      selected: count => `${count} sélectionné(s)`,
+      unsavedChanges: 'Modifications non enregistrées',
+      saving: 'Enregistrement...',
+      saved: 'Tous les changements sont enregistrés',
+      conflict: 'Conflit',
+      previewAppearsAsYouType: "L'aperçu apparaît pendant la saisie.",
+      noImageUrl: "Aucune URL d'image",
+      imageCouldNotBeLoaded: "L'image n'a pas pu être chargée"
+    }
+  : {
+      selectRows: 'Select rows',
+      selected: count => `${count} selected`,
+      unsavedChanges: 'Unsaved changes',
+      saving: 'Saving...',
+      saved: 'All changes saved',
+      conflict: 'Conflict',
+      previewAppearsAsYouType: 'Preview appears as you type.',
+      noImageUrl: 'No image URL',
+      imageCouldNotBeLoaded: 'Image could not be loaded'
+    };
+
 document.addEventListener('click', (event) => {
   const checkbox = event.target.closest('input[type="checkbox"]');
   if (checkbox) return;
@@ -21,7 +46,7 @@ function updateSelectionBar(table) {
   const form = table.closest('form');
   const count = table.querySelectorAll('tbody input[type="checkbox"]:checked').length;
   form?.querySelector('.selection-bar')?.classList.toggle('d-none', count === 0);
-  table.closest('.panel')?.querySelector('.selection-count')?.replaceChildren(document.createTextNode(count ? `${count} selected` : 'Select rows'));
+  table.closest('.panel')?.querySelector('.selection-count')?.replaceChildren(document.createTextNode(count ? uiText.selected(count) : uiText.selectRows));
 }
 
 document.querySelectorAll('.js-filter').forEach(input => {
@@ -49,39 +74,88 @@ if (settingsForm) {
   const status = document.getElementById('autosaveStatus');
   settingsForm.addEventListener('input', () => {
     dirty = true;
-    status.textContent = 'Unsaved changes';
+    status.textContent = uiText.unsavedChanges;
   });
   setInterval(async () => {
     if (!dirty) return;
     dirty = false;
-    status.textContent = 'Saving...';
+    status.textContent = uiText.saving;
     const response = await fetch(settingsForm.action, {
       method: 'POST',
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
       body: new FormData(settingsForm)
     });
     const result = await response.json();
-    status.textContent = result.ok ? 'All changes saved' : 'Conflict';
+    status.textContent = result.ok ? uiText.saved : uiText.conflict;
   }, 8000);
 }
 
-const chatPane = document.getElementById('chat');
-const chatForm = document.getElementById('chatForm');
-if (chatPane && chatForm && window.signalR) {
+const initInventoryChat = () => {
+  if (window.__inventoryChatInitialized || !window.signalR) return;
+
+  const chatPane = document.getElementById('chat');
+  const chatForm = document.getElementById('chatForm');
+  const chatMessages = document.getElementById('chatMessages');
+  if (!chatPane || !chatForm || !chatMessages) return;
+
+  window.__inventoryChatInitialized = true;
+
   const inventoryId = Number(chatPane.dataset.inventoryId);
   const connection = new signalR.HubConnectionBuilder().withUrl('/hubs/inventory-discussion').build();
-  connection.on('ReceiveMessage', message => {
-    const box = document.getElementById('chatMessages');
-    box.insertAdjacentHTML('beforeend', `<article class="border-bottom py-2"><div class="small text-body-secondary">${message.author} - ${message.createdAt}</div><div>${message.html}</div></article>`);
-    box.scrollTop = box.scrollHeight;
+  let activeOnlineUsers = new Set();
+  const setOnlineUsers = onlineUserIds => {
+    const online = new Set(onlineUserIds || []);
+    activeOnlineUsers = online;
+    chatMessages.querySelectorAll('[data-chat-author-id]').forEach(avatar => {
+      avatar.classList.toggle('is-online', online.has(avatar.dataset.chatAuthorId));
+    });
+  };
+
+  const appendMessage = message => {
+    const avatar = (message.author || 'U').trim().charAt(0).toUpperCase() || 'U';
+    chatMessages.insertAdjacentHTML('beforeend', `
+      <article class="chat-message">
+        <div class="chat-avatar ${activeOnlineUsers.has(message.authorId || '') ? 'is-online' : ''}" data-chat-author-id="${message.authorId || ''}">${avatar}</div>
+        <div class="chat-bubble">
+          <div class="chat-meta">${message.author} <span>${message.createdAt}</span></div>
+          <div class="markdown">${message.html}</div>
+        </div>
+      </article>`);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  };
+
+  connection.on('ReceiveMessage', appendMessage);
+  connection.on('PresenceChanged', payload => {
+    if (Number(payload.inventoryId) !== inventoryId) return;
+    setOnlineUsers(payload.onlineUserIds);
   });
-  connection.start().then(() => connection.invoke('JoinInventoryGroup', inventoryId));
-  chatForm.addEventListener('submit', event => {
+
+  connection.start()
+    .then(() => connection.invoke('JoinInventoryGroup', inventoryId))
+    .catch(() => {
+      window.__inventoryChatInitialized = false;
+    });
+
+  chatForm.addEventListener('submit', async event => {
     event.preventDefault();
-    const text = chatForm.querySelector('textarea').value;
-    connection.invoke('SendMessage', inventoryId, text);
-    chatForm.querySelector('textarea').value = '';
+    const textarea = chatForm.querySelector('textarea');
+    const text = textarea?.value?.trim();
+    if (!text) return;
+
+    try {
+      await connection.invoke('SendMessage', inventoryId, text);
+      textarea.value = '';
+    } catch {
+      window.__inventoryChatInitialized = false;
+      chatForm.submit();
+    }
   });
+};
+
+if (document.readyState === 'complete') {
+  initInventoryChat();
+} else {
+  window.addEventListener('load', initInventoryChat, { once: true });
 }
 
 const createForm = document.querySelector('.form-card form');
@@ -101,7 +175,7 @@ if (markdownInput && markdownPreview) {
   const renderMarkdownPreview = () => {
     const raw = markdownInput.value.trim();
     if (!raw) {
-      markdownPreview.textContent = 'Preview appears as you type.';
+      markdownPreview.textContent = uiText.previewAppearsAsYouType;
       return;
     }
     const escaped = raw
@@ -133,7 +207,7 @@ if (imageUrlInput && imagePreview) {
   const updateImagePreview = () => {
     const url = imageUrlInput.value.trim();
     if (!url) {
-      imagePreview.textContent = 'No image URL';
+      imagePreview.textContent = uiText.noImageUrl;
       return;
     }
     imagePreview.innerHTML = '';
@@ -141,7 +215,7 @@ if (imageUrlInput && imagePreview) {
     img.alt = 'Inventory preview';
     img.src = url;
     img.onerror = () => {
-      imagePreview.textContent = 'Image could not be loaded';
+      imagePreview.textContent = uiText.imageCouldNotBeLoaded;
     };
     imagePreview.appendChild(img);
   };

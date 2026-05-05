@@ -22,10 +22,16 @@ public class InventoriesController(
 {
     public async Task<IActionResult> Index(string? q, string? tag, string? accessFilter)
     {
-        var query = db.Inventories.AsNoTracking()
+        var user = User.Identity?.IsAuthenticated == true ? await users.GetUserAsync(User) : null;
+        var scope = await access.BuildScopeAsync(user);
+
+        var query = access.FilterReadableInventories(
+                db.Inventories.AsNoTracking(),
+                scope)
             .Include(i => i.Owner)
             .Include(i => i.InventoryTags).ThenInclude(t => t.Tag)
             .AsQueryable();
+
         if (!string.IsNullOrWhiteSpace(q)) query = query.Where(i =>
             EF.Functions.ILike(i.Title, $"%{q}%") ||
             EF.Functions.ILike(i.Category, $"%{q}%") ||
@@ -60,6 +66,13 @@ public class InventoriesController(
         var inventory = await inventories.GetDetailsAsync(id);
         if (inventory is null) return NotFound();
 
+        var user = User.Identity?.IsAuthenticated == true ? await users.GetUserAsync(User) : null;
+        var accessState = await access.GetAccessAsync(id, user);
+        if (!accessState.CanRead)
+        {
+            return user is null ? NotFound() : Forbid();
+        }
+
         inventory.Items = await db.InventoryItems.AsNoTracking()
             .Where(i => i.InventoryId == id)
             .Include(i => i.Likes)
@@ -71,11 +84,10 @@ public class InventoriesController(
             id,
             inventory.Items.Count);
 
-        var user = User.Identity?.IsAuthenticated == true ? await users.GetUserAsync(User) : null;
         return View(new InventoryDetailsViewModel
         {
             Inventory = inventory,
-            Access = await access.GetAccessAsync(id, user),
+            Access = accessState,
             Stats = await stats.BuildAsync(id),
             CustomIdPreview = await customIds.PreviewAsync(id)
         });
@@ -104,6 +116,13 @@ public class InventoriesController(
     [Authorize, HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveSettings(InventoryFormViewModel model)
     {
+        var actor = (await users.GetUserAsync(User))!;
+        var accessState = await access.GetAccessAsync(model.Id, actor);
+        if (!accessState.CanManage)
+        {
+            return Forbid();
+        }
+
         var result = await inventories.UpdateSettingsAsync(new Inventory
         {
             Id = model.Id,
@@ -114,7 +133,7 @@ public class InventoriesController(
             StatusOptions = model.StatusOptions,
             IsPublic = model.IsPublic,
             RowVersion = model.RowVersion
-        }, model.Tags, (await users.GetUserAsync(User))!);
+        }, model.Tags, actor);
 
         if (Request.Headers.XRequestedWith == "XMLHttpRequest")
             return Json(new { ok = result.Success, error = result.Error });
@@ -125,7 +144,14 @@ public class InventoriesController(
     [Authorize, HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
-        var result = await inventories.DeleteAsync(id, (await users.GetUserAsync(User))!);
+        var actor = (await users.GetUserAsync(User))!;
+        var accessState = await access.GetAccessAsync(id, actor);
+        if (!accessState.CanManage)
+        {
+            return Forbid();
+        }
+
+        var result = await inventories.DeleteAsync(id, actor);
         TempData[result.Success ? "Success" : "Error"] = result.Error ?? "Inventory deleted.";
         return RedirectToAction(nameof(Index));
     }
@@ -143,6 +169,12 @@ public class InventoriesController(
         var deleted = 0;
         foreach (var id in ids.Distinct())
         {
+            var accessState = await access.GetAccessAsync(id, user);
+            if (!accessState.CanManage)
+            {
+                continue;
+            }
+
             var result = await inventories.DeleteAsync(id, user);
             if (result.Success) deleted++;
         }

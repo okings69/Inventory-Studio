@@ -47,3 +47,34 @@ public class ItemFormViewModel
     [ValidateNever]
     public IReadOnlyList<InventoryField> Fields { get; set; } = [];
 }
+
+public class ItemDetailsViewModel
+{
+    public Inventory Inventory { get; set; } = new();
+    public InventoryItem Item { get; set; } = new();
+    public IReadOnlyList<InventoryField> Fields { get; set; } = [];
+    public AccessState AccessState { get; set; } = new(false, false, false, false);
+    public bool CanRead => AccessState.CanRead;
+    public bool CanWrite => AccessState.CanWrite;
+    public bool CanManage => AccessState.CanManage;
+    public bool IsLikedByCurrentUser { get; set; }
+    public IReadOnlyList<ItemDisplayValueViewModel> DisplayValues { get; set; } = [];
+}
+
+public class ItemDisplayValueViewModel
+{
+    public InventoryField Field { get; set; } = new();
+    public object? RawValue { get; set; }
+    public string DisplayValue { get; set; } = string.Empty;
+    public bool HasValue { get; set; }
+    public bool IsLink { get; set; }
+    public bool IsBoolean { get; set; }
+    public bool? BooleanValue { get; set; }
+}
+
+public class ProfileViewModel
+{
+    public IReadOnlyList<Inventory> Owned { get; set; } = [];
+    public IReadOnlyList<Inventory> Writable { get; set; } = [];
+    public IReadOnlyList<Inventory> Accessible { get; set; } = [];
+}

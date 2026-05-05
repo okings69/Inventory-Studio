@@ -2,13 +2,18 @@ using CourseInventory.Web.Data;
 using CourseInventory.Web.Hubs;
 using CourseInventory.Web.Models;
 using CourseInventory.Web.Services;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Npgsql;
+using System.Net;
 using System.Globalization;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddUserSecrets<Program>(optional: true);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Host=localhost;Port=5432;Database=course_inventory;Username=postgres;Password=postgres";
@@ -28,10 +33,43 @@ var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
 var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
 if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
 {
-    authentication.AddGoogle(options =>
+    authentication.AddOpenIdConnect("Google", "Google", options =>
     {
+        var googleBackchannelHandler = new HttpClientHandler
+        {
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+        };
+
+        options.SignInScheme = IdentityConstants.ExternalScheme;
+        options.Authority = "https://accounts.google.com";
         options.ClientId = googleClientId;
         options.ClientSecret = googleClientSecret;
+        options.CallbackPath = "/signin-google";
+        options.ResponseType = "code";
+        options.UsePkce = true;
+        options.SaveTokens = true;
+        options.GetClaimsFromUserInfoEndpoint = false;
+        options.Scope.Clear();
+        options.Scope.Add("openid");
+        options.Scope.Add("profile");
+        options.Scope.Add("email");
+        options.Backchannel = new HttpClient(googleBackchannelHandler)
+        {
+            Timeout = TimeSpan.FromMinutes(3),
+            DefaultRequestVersion = HttpVersion.Version11,
+            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
+        };
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            NameClaimType = ClaimTypes.Name,
+            RoleClaimType = ClaimTypes.Role
+        };
+        options.Events.OnRemoteFailure = context =>
+        {
+            context.Response.Redirect("/Account/Login?externalError=google");
+            context.HandleResponse();
+            return Task.CompletedTask;
+        };
     });
 }
 
@@ -41,8 +79,22 @@ if (!string.IsNullOrWhiteSpace(facebookAppId) && !string.IsNullOrWhiteSpace(face
 {
     authentication.AddFacebook(options =>
     {
+        // ASP.NET Core handles /signin-facebook through the remote auth middleware,
+        // so the callback path must stay aligned with the Meta Developer redirect URI.
+        options.SignInScheme = IdentityConstants.ExternalScheme;
         options.AppId = facebookAppId;
         options.AppSecret = facebookAppSecret;
+        options.CallbackPath = "/signin-facebook";
+        options.SaveTokens = true;
+        options.Scope.Add("email");
+        options.Fields.Add("name");
+        options.Fields.Add("email");
+        options.Events.OnRemoteFailure = context =>
+        {
+            context.Response.Redirect("/Account/Login?externalError=facebook");
+            context.HandleResponse();
+            return Task.CompletedTask;
+        };
     });
 }
 
@@ -53,6 +105,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 builder.Services.AddLocalization();
+builder.Services.AddMemoryCache();
 builder.Services.AddControllersWithViews();
 builder.Services.AddSignalR();
 builder.Services.AddScoped<IAccessService, AccessService>();
@@ -61,12 +114,14 @@ builder.Services.AddScoped<IItemService, ItemService>();
 builder.Services.AddScoped<IFieldService, FieldService>();
 builder.Services.AddScoped<ICustomIdService, CustomIdService>();
 builder.Services.AddScoped<IDiscussionService, DiscussionService>();
+builder.Services.AddSingleton<IDiscussionPresenceService, DiscussionPresenceService>();
 builder.Services.AddScoped<IMarkdownService, MarkdownService>();
 builder.Services.AddScoped<ISearchService, SearchService>();
 builder.Services.AddScoped<IStatsService, StatsService>();
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IImageService, ImageService>();
 builder.Services.AddSingleton<IUiTextService, UiTextService>();
+builder.Services.AddScoped<IUserActivityService, UserActivityService>();
 
 var app = builder.Build();
 
@@ -92,6 +147,18 @@ app.UseRequestLocalization(new RequestLocalizationOptions
 });
 
 app.UseAuthentication();
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true &&
+        !Path.HasExtension(context.Request.Path.Value) &&
+        !context.Request.Path.StartsWithSegments("/hubs"))
+    {
+        var activity = context.RequestServices.GetRequiredService<IUserActivityService>();
+        await activity.TouchAsync(context.User, context.RequestAborted);
+    }
+
+    await next();
+});
 app.UseAuthorization();
 
 app.MapStaticAssets();

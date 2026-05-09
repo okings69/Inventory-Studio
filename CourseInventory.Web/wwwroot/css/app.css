@@ -1272,6 +1272,16 @@ body,
   opacity: .7;
 }
 
+.item-bool-switch {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.item-bool-switch .form-check-input {
+  cursor: pointer;
+}
+
 .info-callout {
   display: flex;
   align-items: center;

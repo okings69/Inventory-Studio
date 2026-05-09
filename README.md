@@ -1,6 +1,6 @@
-# CourseInventory
+# Inventory Studio
 
-ASP.NET Core MVC inventory management application for a course project.
+Inventory Studio is an ASP.NET Core MVC course project for managing customizable inventories. Users can create inventories, define custom fields, add items, share access, search data, discuss around an inventory, like items, and export CSV files.
 
 ## Stack
 
@@ -13,6 +13,17 @@ ASP.NET Core MVC inventory management application for a course project.
 - Markdig Markdown rendering
 - Cloudinary-ready image upload service
 - PostgreSQL full-text search queries
+- xUnit test project for service and security checks
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Database](docs/DATABASE.md)
+- [Security](docs/SECURITY.md)
+- [Features](docs/FEATURES.md)
+- [Testing](docs/TESTING.md)
+- [Render deployment](docs/DEPLOY_RENDER.md)
+- [Production notes](docs/PRODUCTION.md)
 
 ## Run locally
 
@@ -54,6 +65,17 @@ $env:DOTNET_CLI_HOME='D:\Camp\COURSE_PROJECT\.dotnet'
 $env:NUGET_PACKAGES='D:\Camp\COURSE_PROJECT\.nuget\packages'
 dotnet restore
 dotnet run
+```
+
+Run tests:
+
+```powershell
+cd D:\Camp\COURSE_PROJECT
+$env:DOTNET_CLI_HOME='D:\Camp\COURSE_PROJECT\.dotnet'
+$env:NUGET_PACKAGES='D:\Camp\COURSE_PROJECT\.nuget\packages'
+$env:APPDATA='D:\Camp\COURSE_PROJECT\.appdata'
+$env:USERPROFILE='D:\Camp\COURSE_PROJECT'
+dotnet test CourseInventory.Tests\CourseInventory.Tests.csproj
 ```
 
 For social login in local development, keep secrets out of Git and use user-secrets:
@@ -131,20 +153,37 @@ Cloudinary__ApiSecret
 
 ## Render
 
-Build command:
+Inventory Studio is prepared for Render as a Docker Web Service with Render PostgreSQL.
 
-```bash
-dotnet publish CourseInventory.Web/CourseInventory.Web.csproj -c Release -o out
+Recommended deployment:
+
+1. Push this repository to GitHub.
+2. Create a Render Blueprint from `render.yaml`.
+3. Fill the `sync: false` environment variables in Render.
+4. Let Render build the Docker image and run the pre-deploy migration command.
+
+The Docker container listens on Render's `$PORT`.
+
+Manual Docker build:
+
+```powershell
+docker build -t inventory-studio .
 ```
 
-Start command:
+Manual Docker run with a local PostgreSQL connection string:
 
-```bash
-dotnet out/CourseInventory.Web.dll
+```powershell
+docker run --rm -p 8080:8080 `
+  -e PORT=8080 `
+  -e ASPNETCORE_ENVIRONMENT=Production `
+  -e ConnectionStrings__DefaultConnection="Host=host.docker.internal;Port=5432;Database=course_inventory;Username=course_inventory;Password=YOUR_LOCAL_PASSWORD" `
+  inventory-studio
 ```
 
-Run migrations before first production use:
+Run migrations manually inside the container/app:
 
 ```bash
-dotnet ef database update --project CourseInventory.Web
+dotnet CourseInventory.Web.dll --migrate
 ```
+
+Full deployment details are in [docs/DEPLOY_RENDER.md](docs/DEPLOY_RENDER.md).

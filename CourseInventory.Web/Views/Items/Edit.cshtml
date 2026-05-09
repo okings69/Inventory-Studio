@@ -50,10 +50,12 @@
                     var isStatus = normalizedTitle == "status";
                     var isYear = normalizedTitle == "year";
                     var isSerial = normalizedTitle == "serialnumber";
+                    var isBooleanField = f.FieldKey.StartsWith("Bool", StringComparison.Ordinal);
+                    var fieldInputId = $"field-{f.Id}";
                     var required = isModel || isSerial || isYear;
 
                     <div class="col-md-6">
-                        <label class="form-label">
+                        <label class="form-label" for="@(isBooleanField ? fieldInputId : null)">
                             <span class="field-label-with-help">
                                 <span>@f.Title</span>
                                 @if (!string.IsNullOrWhiteSpace(f.Description))
@@ -108,9 +110,24 @@
                                 if (isStatus) { <select class="form-select" asp-for="Item.Link3" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
                                 else { <input class="form-control" asp-for="Item.Link3" type="url" required="@required" /> }
                                 break;
-                            case "Bool1": <div class="form-check form-switch"><input class="form-check-input" asp-for="Item.Bool1" /></div>; break;
-                            case "Bool2": <div class="form-check form-switch"><input class="form-check-input" asp-for="Item.Bool2" /></div>; break;
-                            case "Bool3": <div class="form-check form-switch"><input class="form-check-input" asp-for="Item.Bool3" /></div>; break;
+                            case "Bool1":
+                                <div class="form-check form-switch item-bool-switch">
+                                    <input class="form-check-input" type="checkbox" id="@fieldInputId" name="Item.Bool1" value="true" checked="@(Model.Item.Bool1 == true)" role="switch" />
+                                </div>
+                                <input type="hidden" name="Item.Bool1" value="false" />
+                                break;
+                            case "Bool2":
+                                <div class="form-check form-switch item-bool-switch">
+                                    <input class="form-check-input" type="checkbox" id="@fieldInputId" name="Item.Bool2" value="true" checked="@(Model.Item.Bool2 == true)" role="switch" />
+                                </div>
+                                <input type="hidden" name="Item.Bool2" value="false" />
+                                break;
+                            case "Bool3":
+                                <div class="form-check form-switch item-bool-switch">
+                                    <input class="form-check-input" type="checkbox" id="@fieldInputId" name="Item.Bool3" value="true" checked="@(Model.Item.Bool3 == true)" role="switch" />
+                                </div>
+                                <input type="hidden" name="Item.Bool3" value="false" />
+                                break;
                         }
                         @if (isStatus)
                         {
@@ -131,7 +148,9 @@
                         @RenderFieldValidation(f.FieldKey)
                         @if (!string.IsNullOrWhiteSpace(f.Description))
                         {
-                            <div class="form-text">@f.Description</div>
+                            <noscript>
+                                <div class="form-text">@f.Description</div>
+                            </noscript>
                         }
                     </div>
                 }

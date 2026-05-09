@@ -1,14 +1,26 @@
 services:
   - type: web
-    name: course-inventory
-    env: dotnet
+    name: inventory-studio-web
+    runtime: docker
     plan: free
-    buildCommand: dotnet publish CourseInventory.Web/CourseInventory.Web.csproj -c Release -o out
-    startCommand: dotnet out/CourseInventory.Web.dll
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeploy: true
+    healthCheckPath: /
+    preDeployCommand: dotnet CourseInventory.Web.dll --migrate
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: inventory-studio-db
+          property: connectionString
+      - key: Database__MigrateOnStartup
+        value: false
+      - key: SeedAdmin__Email
+        sync: false
+      - key: SeedAdmin__Password
         sync: false
       - key: Authentication__Google__ClientId
         sync: false
@@ -18,9 +30,22 @@ services:
         sync: false
       - key: Authentication__Facebook__AppSecret
         sync: false
+      - key: Jwt__SecretKey
+        generateValue: true
+      - key: Jwt__Issuer
+        value: InventoryStudio
+      - key: Jwt__Audience
+        value: InventoryStudioUsers
       - key: Cloudinary__CloudName
         sync: false
       - key: Cloudinary__ApiKey
         sync: false
       - key: Cloudinary__ApiSecret
         sync: false
+
+databases:
+  - name: inventory-studio-db
+    databaseName: inventory_studio
+    user: inventory_studio
+    plan: free
+    region: frankfurt

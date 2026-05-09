@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="CourseInventory.Web/CourseInventory.Web.csproj" />
+  <Project Path="CourseInventory.Tests/CourseInventory.Tests.csproj" />
 </Solution>

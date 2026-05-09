@@ -7,7 +7,20 @@
     ViewData["Title"] = Model.Inventory.Title;
     var inventory = Model.Inventory;
     var fields = inventory.Fields.OrderBy(f => f.SortOrder).ThenBy(f => f.Title).ToList();
-    var tableFields = fields.Where(f => f.ShowInTable).ToList();
+    var visibleFields = fields.Where(f => f.ShowInTable).ToList();
+    var essentialFieldOrder = new[] { "title", "author", "year", "status" };
+    var essentialFieldMap = visibleFields
+        .Select(field => new { Field = field, NormalizedTitle = NormalizeFieldTitle(field.Title) })
+        .Where(entry => essentialFieldOrder.Contains(entry.NormalizedTitle))
+        .GroupBy(entry => entry.NormalizedTitle)
+        .ToDictionary(group => group.Key, group => group.First().Field);
+    var preferredTableFields = essentialFieldOrder
+        .Where(key => essentialFieldMap.ContainsKey(key))
+        .Select(key => essentialFieldMap[key])
+        .ToList();
+    var tableFields = preferredTableFields.Count > 0
+        ? preferredTableFields
+        : visibleFields.Take(4).ToList();
     var tags = string.Join(", ", inventory.InventoryTags.Select(t => t.Tag!.Name));
     var items = inventory.Items.OrderByDescending(i => i.UpdatedAt).ToList();
     var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -572,6 +585,9 @@
 
     static bool IsStatusField(InventoryField field) =>
         string.Equals(field.Title?.Trim(), "Status", StringComparison.OrdinalIgnoreCase);
+
+    static string NormalizeFieldTitle(string? value) =>
+        new((value ?? string.Empty).Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
 
     static string TrimDuplicateHeading(string title, string? markdown)
     {

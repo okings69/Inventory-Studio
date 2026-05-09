@@ -28,19 +28,19 @@ Render injects a PostgreSQL URL. `Program.cs` converts `postgresql://user:passwo
 
 ## Migrations
 
-Production should run migrations before traffic reaches the new app version:
+Paid Render services can run migrations before traffic reaches the new app version:
 
 ```bash
 dotnet CourseInventory.Web.dll --migrate
 ```
 
-Normal production startup does not run migrations unless:
+Render Free does not support `preDeployCommand`, so this project uses startup migrations on Free through:
 
 ```text
 Database__MigrateOnStartup=true
 ```
 
-Keeping startup migrations disabled is safer for future horizontal scaling.
+For future paid/scaled production, set `Database__MigrateOnStartup=false` and run `dotnet CourseInventory.Web.dll --migrate` manually or as a pre-deploy command.
 
 ## Reverse proxy
 

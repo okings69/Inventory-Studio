@@ -8,7 +8,6 @@ services:
     dockerContext: .
     autoDeploy: true
     healthCheckPath: /
-    preDeployCommand: dotnet CourseInventory.Web.dll --migrate
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
@@ -17,7 +16,7 @@ services:
           name: inventory-studio-db
           property: connectionString
       - key: Database__MigrateOnStartup
-        value: false
+        value: true
       - key: SeedAdmin__Email
         sync: false
       - key: SeedAdmin__Password

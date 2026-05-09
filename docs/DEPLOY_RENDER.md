@@ -68,15 +68,15 @@ http://localhost:5158/signin-facebook
 
 ## 5. Migrations
 
-Render runs this pre-deploy command from `render.yaml`:
+Render Free does not support `preDeployCommand`. For the Free plan, the Blueprint sets:
 
-```bash
-dotnet CourseInventory.Web.dll --migrate
+```text
+Database__MigrateOnStartup=true
 ```
 
-This applies EF Core migrations and seeds roles/admin before the new service version receives traffic.
+This lets the app apply EF Core migrations when it starts. For a course project this is simple and acceptable.
 
-Manual fallback from a Render shell:
+After the first successful deployment, you can switch it to `false` and run migrations manually from a Render shell:
 
 ```bash
 dotnet CourseInventory.Web.dll --migrate
@@ -86,8 +86,8 @@ dotnet CourseInventory.Web.dll --migrate
 
 1. Push to GitHub.
 2. Render auto-builds the Docker image.
-3. Render runs the pre-deploy migration command.
-4. Render starts the container.
+3. Render starts the container.
+4. The app applies migrations on startup when `Database__MigrateOnStartup=true`.
 5. ASP.NET Core listens on Render's `$PORT`.
 
 ## 7. Post-deploy checks

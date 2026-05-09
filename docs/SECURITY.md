@@ -67,7 +67,8 @@ For Render production:
 - keep OAuth, Cloudinary, admin seed, and database credentials in Render environment variables;
 - do not commit real secrets to `appsettings.json`, `appsettings.example.json`, or `render.yaml`;
 - use Render PostgreSQL private connection string through the Blueprint;
-- keep `Database__MigrateOnStartup=false` and use the pre-deploy migration command;
+- on Render Free, use `Database__MigrateOnStartup=true` because `preDeployCommand` is not supported;
+- on paid/scaled production, prefer `Database__MigrateOnStartup=false` and run migrations before deployment;
 - update OAuth callback URLs to the deployed HTTPS domain.
 
 The app also enables forwarded headers, secure cookies, HSTS, HTTPS redirection, and basic security headers in production.

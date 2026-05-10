@@ -35,6 +35,7 @@ Optional but recommended:
 
 - `SeedAdmin__Email`
 - `SeedAdmin__Password`
+- `SeedAdmin__ResetPassword` set to `true` only when you need to force-reset the seeded admin password.
 - `Authentication__Google__ClientId`
 - `Authentication__Google__ClientSecret`
 - `Authentication__Facebook__AppId`
@@ -103,7 +104,30 @@ dotnet CourseInventory.Web.dll --migrate
 - Test chat on an inventory.
 - Check Render logs for migration or database errors.
 
-## 8. Rollback
+## 8. Admin account
+
+The app seeds an admin account from:
+
+```text
+SeedAdmin__Email
+SeedAdmin__Password
+```
+
+If the database already contains an `admin` user from a previous deployment, the seed process ensures that user is unblocked, email-confirmed, and in the `Admin` role.
+
+If you forgot the password, temporarily set:
+
+```text
+SeedAdmin__ResetPassword=true
+```
+
+Then redeploy, log in, and set it back to:
+
+```text
+SeedAdmin__ResetPassword=false
+```
+
+## 9. Rollback
 
 Use Render Dashboard:
 
@@ -114,7 +138,7 @@ Use Render Dashboard:
 
 If a migration changed the database schema, rollback the app carefully. Database schema rollback should be handled with a planned EF migration, not by manually deleting production data.
 
-## 9. Frequent issues
+## 10. Frequent issues
 
 | Problem | Cause | Fix |
 |---|---|---|

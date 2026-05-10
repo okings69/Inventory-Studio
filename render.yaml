@@ -19,6 +19,8 @@ services:
         sync: false
       - key: SeedAdmin__Password
         sync: false
+      - key: SeedAdmin__ResetPassword
+        value: false
       - key: Authentication__Google__ClientId
         sync: false
       - key: Authentication__Google__ClientSecret

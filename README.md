@@ -160,7 +160,8 @@ Recommended deployment:
 1. Push this repository to GitHub.
 2. Create a Render Blueprint from `render.yaml`.
 3. Fill the `sync: false` environment variables in Render.
-4. Let Render build the Docker image. On the Free plan, migrations run at startup through `Database__MigrateOnStartup=true`.
+4. For `ConnectionStrings__DefaultConnection`, paste the External Database URL from your existing Render PostgreSQL database, for example `user-management-db`.
+5. Let Render build the Docker image. On the Free plan, migrations run at startup through `Database__MigrateOnStartup=true`.
 
 The Docker container listens on Render's `$PORT`.
 

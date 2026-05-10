@@ -12,9 +12,7 @@ services:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ConnectionStrings__DefaultConnection
-        fromDatabase:
-          name: inventory-studio-db
-          property: connectionString
+        sync: false
       - key: Database__MigrateOnStartup
         value: true
       - key: SeedAdmin__Email
@@ -41,10 +39,3 @@ services:
         sync: false
       - key: Cloudinary__ApiSecret
         sync: false
-
-databases:
-  - name: inventory-studio-db
-    databaseName: inventory_studio
-    user: inventory_studio
-    plan: free
-    region: frankfurt

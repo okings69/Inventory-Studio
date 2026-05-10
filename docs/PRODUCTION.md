@@ -24,7 +24,7 @@ Production must provide either:
 - `ConnectionStrings__DefaultConnection`
 - or `DATABASE_URL`
 
-Render injects a PostgreSQL URL. `Program.cs` converts `postgresql://user:password@host:port/database` into an Npgsql connection string.
+Render can provide a PostgreSQL URL. On the Free plan, reuse an existing database and paste its External Database URL into `ConnectionStrings__DefaultConnection`. `Program.cs` converts `postgresql://user:password@host:port/database` into an Npgsql connection string.
 
 ## Migrations
 

@@ -1,6 +1,6 @@
 # Deploy Inventory Studio on Render
 
-This guide deploys Inventory Studio as a Docker Web Service connected to Render PostgreSQL.
+This guide deploys Inventory Studio as a Docker Web Service connected to an existing Render PostgreSQL database.
 
 ## 1. Prerequisites
 
@@ -17,10 +17,9 @@ In Render:
 2. Click **New Blueprint Instance**.
 3. Select the GitHub repository.
 4. Render reads `render.yaml`.
-5. Confirm the creation of:
-   - `inventory-studio-web`
-   - `inventory-studio-db`
+5. Confirm the creation of `inventory-studio-web`.
 6. Fill all variables marked `sync: false`.
+7. For `ConnectionStrings__DefaultConnection`, paste the External Database URL from the existing Render PostgreSQL database, for example `user-management-db`.
 
 ## 3. Required Render variables
 
@@ -29,7 +28,7 @@ The Blueprint sets most values automatically.
 Required:
 
 - `ASPNETCORE_ENVIRONMENT=Production`
-- `ConnectionStrings__DefaultConnection`: automatically injected from Render PostgreSQL.
+- `ConnectionStrings__DefaultConnection`: paste the existing Render PostgreSQL External Database URL manually.
 - `Database__MigrateOnStartup=false`
 
 Optional but recommended:
@@ -76,6 +75,8 @@ Database__MigrateOnStartup=true
 
 This lets the app apply EF Core migrations when it starts. For a course project this is simple and acceptable.
 
+If you reuse an existing free database such as `user-management-db`, Inventory Studio will create its own EF Core tables in that database during startup migrations.
+
 After the first successful deployment, you can switch it to `false` and run migrations manually from a Render shell:
 
 ```bash
@@ -118,6 +119,7 @@ If a migration changed the database schema, rollback the app carefully. Database
 | Problem | Cause | Fix |
 |---|---|---|
 | App exits on startup | Missing database connection string | Check `ConnectionStrings__DefaultConnection` |
+| Blueprint sync fails with database limit | Render Free allows only one active free database | Remove the `databases:` block and reuse an existing DB |
 | OAuth redirects fail | Wrong callback URL | Update Google/Meta redirect URIs |
 | Images do not upload | Missing Cloudinary variables | Add Cloudinary secrets |
 | Login cookie issues | HTTP/HTTPS proxy mismatch | Keep forwarded headers enabled |

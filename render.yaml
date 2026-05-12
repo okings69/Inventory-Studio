@@ -15,10 +15,14 @@ services:
         sync: false
       - key: Database__MigrateOnStartup
         value: true
+      - key: Database__FailFastOnMigrationError
+        value: false
       - key: SeedAdmin__Email
         sync: false
       - key: SeedAdmin__Password
         sync: false
+      - key: SeedAdmin__DisplayName
+        value: admin
       - key: SeedAdmin__ResetPassword
         value: false
       - key: Authentication__Google__ClientId

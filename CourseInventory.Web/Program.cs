@@ -18,8 +18,8 @@ builder.Configuration.AddUserSecrets<Program>(optional: true);
 var runMigrationsOnly = args.Any(arg => string.Equals(arg, "--migrate", StringComparison.OrdinalIgnoreCase));
 
 var connectionString = NormalizePostgresConnectionString(
-    builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? builder.Configuration["DATABASE_URL"]);
+    builder.Configuration["DATABASE_URL"]
+    ?? builder.Configuration.GetConnectionString("DefaultConnection"));
 
 if (builder.Environment.IsProduction() && string.IsNullOrWhiteSpace(connectionString))
 {
@@ -152,7 +152,7 @@ var app = builder.Build();
 
 if (runMigrationsOnly)
 {
-    await SeedData.SeedAsync(app.Services);
+    await RunDatabaseStartupAsync(app, throwOnFailure: true);
     return;
 }
 
@@ -220,7 +220,10 @@ try
 
     if (!app.Environment.IsEnvironment("Testing") && shouldMigrateOnStartup)
     {
-        await SeedData.SeedAsync(app.Services);
+        var failFastOnMigrationError = app.Environment.IsDevelopment()
+            || app.Configuration.GetValue<bool>("Database:FailFastOnMigrationError");
+
+        await RunDatabaseStartupAsync(app, throwOnFailure: failFastOnMigrationError);
     }
 }
 catch (PostgresException ex) when (app.Environment.IsDevelopment() && ex.SqlState == PostgresErrorCodes.InvalidPassword)
@@ -237,6 +240,29 @@ catch (NpgsqlException ex) when (app.Environment.IsDevelopment())
 }
 
 app.Run();
+
+static async Task RunDatabaseStartupAsync(WebApplication app, bool throwOnFailure)
+{
+    var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseStartup");
+
+    try
+    {
+        await SeedData.SeedAsync(
+            app.Services,
+            throwOnMigrationFailure: throwOnFailure,
+            throwOnSeedFailure: throwOnFailure);
+    }
+    catch (Exception ex)
+    {
+        logger.LogCritical(ex, "Database migration and seed failed");
+        if (throwOnFailure)
+        {
+            throw;
+        }
+
+        logger.LogWarning("Application startup will continue because fail-fast migration is disabled");
+    }
+}
 
 static string? NormalizePostgresConnectionString(string? value)
 {
@@ -265,6 +291,7 @@ static string? NormalizePostgresConnectionString(string? value)
         Password = password,
         SslMode = SslMode.Require
     };
+    builder["Trust Server Certificate"] = true;
 
     return builder.ConnectionString;
 }

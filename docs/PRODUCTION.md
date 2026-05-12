@@ -38,9 +38,19 @@ Render Free does not support `preDeployCommand`, so this project uses startup mi
 
 ```text
 Database__MigrateOnStartup=true
+Database__FailFastOnMigrationError=false
 ```
 
 For future paid/scaled production, set `Database__MigrateOnStartup=false` and run `dotnet CourseInventory.Web.dll --migrate` manually or as a pre-deploy command.
+
+Database startup logs include:
+
+- `Starting database migration`
+- `Database migration completed`
+- `Starting seed`
+- `Seed completed`
+
+If `DATABASE_URL` is provided, the app converts it to an Npgsql connection string and enables `SSL Mode=Require;Trust Server Certificate=true`.
 
 ## Reverse proxy
 

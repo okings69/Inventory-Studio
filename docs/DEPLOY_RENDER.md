@@ -29,12 +29,14 @@ Required:
 
 - `ASPNETCORE_ENVIRONMENT=Production`
 - `ConnectionStrings__DefaultConnection`: paste the existing Render PostgreSQL External Database URL manually.
-- `Database__MigrateOnStartup=false`
+- `Database__MigrateOnStartup=true` on Render Free.
+- `Database__FailFastOnMigrationError=false` on Render Free, so the app logs migration failures clearly instead of aborting the container during normal startup.
 
 Optional but recommended:
 
 - `SeedAdmin__Email`
 - `SeedAdmin__Password`
+- `SeedAdmin__DisplayName`
 - `SeedAdmin__ResetPassword` set to `true` only when you need to force-reset the seeded admin password.
 - `Authentication__Google__ClientId`
 - `Authentication__Google__ClientSecret`
@@ -78,6 +80,17 @@ This lets the app apply EF Core migrations when it starts. For a course project 
 
 If you reuse an existing free database such as `user-management-db`, Inventory Studio will create its own EF Core tables in that database during startup migrations.
 
+Expected migration logs:
+
+```text
+Starting database migration
+Database migration completed
+Starting seed
+Seed completed
+```
+
+If migration fails, the full exception is logged. On Render Free, `Database__FailFastOnMigrationError=false` lets the service stay up so the configuration can be corrected from the dashboard.
+
 After the first successful deployment, you can switch it to `false` and run migrations manually from a Render shell:
 
 ```bash
@@ -111,6 +124,7 @@ The app seeds an admin account from:
 ```text
 SeedAdmin__Email
 SeedAdmin__Password
+SeedAdmin__DisplayName
 ```
 
 If the database already contains an `admin` user from a previous deployment, the seed process ensures that user is unblocked, email-confirmed, and in the `Admin` role.

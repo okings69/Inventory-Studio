@@ -11,6 +11,37 @@
     var activityJson = System.Text.Json.JsonSerializer.Serialize(Model.LoginActivity, jsonOptions);
     var chartLabelsJson = System.Text.Json.JsonSerializer.Serialize(Model.LoginActivity.Select(point => point.Label), jsonOptions);
     var chartValuesJson = System.Text.Json.JsonSerializer.Serialize(Model.LoginActivity.Select(point => point.Count), jsonOptions);
+    var adminModalTextJson = System.Text.Json.JsonSerializer.Serialize(new
+    {
+        block = new
+        {
+            title = T["BlockUserTitle"],
+            message = T["BlockUserMessage"],
+            helper = T["BlockUserHelper"],
+            confirm = T["ConfirmBlock"]
+        },
+        unblock = new
+        {
+            title = T["UnblockUserTitle"],
+            message = T["UnblockUserMessage"],
+            helper = T["UnblockUserHelper"],
+            confirm = T["ConfirmUnblock"]
+        },
+        delete = new
+        {
+            title = T["DeleteUserTitle"],
+            message = T["DeleteUserMessage"],
+            helper = T["DeleteUserHelper"],
+            confirm = T["ConfirmDeleteUser"]
+        },
+        admin = new
+        {
+            title = T["Admin"],
+            message = T["ConfirmRemoveAdmin"],
+            helper = "",
+            confirm = T["Save"]
+        }
+    }, jsonOptions);
     var latestLoginLabel = Model.LatestLoginUser?.UserName ?? T["Never"];
     var selectedUsersHint = "{0} " + T["Users"] + " " + T["Selected"];
 }
@@ -76,6 +107,8 @@
                     @foreach (var user in Model.Users)
                     {
                         var disableReason = user.DisabledActionReason ?? T["CannotEditSelf"];
+                        var blockAction = user.IsBlocked ? "unblock" : "block";
+                        var blockLabel = user.IsBlocked ? T["Unblock"] : T["Block"];
                         <tr class="@(user.IsAdmin ? "admin-user-row is-admin" : "admin-user-row") @(user.IsCurrentUser ? "is-self" : string.Empty)"
                             data-row-title="@($"{user.UserName} - {(user.IsAdmin ? T["AdminUser"] : T["RegularUser"])}")"
                             data-user-id="@user.Id"
@@ -125,13 +158,13 @@
                                     <form asp-action="ToggleBlock" method="post" data-confirmable-form>
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@user.Id" />
-                                        <button class="btn btn-sm btn-outline-warning"
+                                        <button class="btn btn-sm @(user.IsBlocked ? "btn-outline-success" : "btn-outline-warning")"
                                                 type="submit"
-                                                data-confirm-message="@T["ConfirmBlockUser"]"
-                                                data-confirm-title="@T["Block"]"
-                                                aria-label="@(user.CanBlock ? T["Block"] : disableReason)"
+                                                data-action="@blockAction"
+                                                data-user-name="@user.UserName"
+                                                aria-label="@(user.CanBlock ? blockLabel : disableReason)"
                                                 disabled="@(!user.CanBlock)">
-                                            @T["Block"]
+                                            @blockLabel
                                         </button>
                                     </form>
                                     <form asp-action="ToggleAdmin" method="post" data-confirmable-form>
@@ -139,8 +172,8 @@
                                         <input type="hidden" name="id" value="@user.Id" />
                                         <button class="btn btn-sm btn-outline-primary"
                                                 type="submit"
-                                                data-confirm-message="@T["ConfirmRemoveAdmin"]"
-                                                data-confirm-title="@T["Admin"]"
+                                                data-action="admin"
+                                                data-user-name="@user.UserName"
                                                 aria-label="@(user.CanToggleAdmin ? T["Admin"] : disableReason)"
                                                 disabled="@(!user.CanToggleAdmin)">
                                             @T["Admin"]
@@ -151,8 +184,8 @@
                                         <input type="hidden" name="id" value="@user.Id" />
                                         <button class="btn btn-sm btn-outline-danger"
                                                 type="submit"
-                                                data-confirm-message="@T["ConfirmDeleteUser"]"
-                                                data-confirm-title="@T["Delete"]"
+                                                data-action="delete"
+                                                data-user-name="@user.UserName"
                                                 aria-label="@(user.CanDelete ? T["Delete"] : disableReason)"
                                                 disabled="@(!user.CanDelete)">
                                             @T["Delete"]
@@ -232,22 +265,24 @@
     </div>
 </section>
 
-<div class="modal fade" id="adminActionModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade admin-action-modal" id="adminActionModal" tabindex="-1" aria-labelledby="adminActionModalTitle" aria-describedby="adminActionModalMessage" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content app-modal admin-confirm-modal">
-            <div class="modal-header border-0 pb-0">
-                <div>
+            <div class="modal-header border-0 pb-0 admin-confirm-modal__header">
+                <div class="admin-confirm-modal__icon" id="adminActionModalIcon" aria-hidden="true"></div>
+                <div class="admin-confirm-modal__heading">
                     <p class="eyebrow mb-2">@T["AdminOverview"]</p>
-                    <h2 class="h4 mb-0" id="adminActionModalTitle">@T["ConfirmDelete"]</h2>
+                    <h2 class="h4 mb-0" id="adminActionModalTitle">@T["Actions"]</h2>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body pt-3">
-                <p class="mb-0" id="adminActionModalMessage"></p>
+                <p class="admin-confirm-modal__message" id="adminActionModalMessage"></p>
+                <p class="admin-confirm-modal__helper" id="adminActionModalHelper"></p>
             </div>
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
-                <button type="button" class="btn btn-primary" id="adminActionModalConfirm">@T["ConfirmDelete"]</button>
+                <button type="button" class="btn btn-primary" id="adminActionModalConfirm">@T["Save"]</button>
             </div>
         </div>
     </div>
@@ -264,12 +299,69 @@
           const modalElement = document.getElementById('adminActionModal');
           const modalTitle = document.getElementById('adminActionModalTitle');
           const modalMessage = document.getElementById('adminActionModalMessage');
+          const modalHelper = document.getElementById('adminActionModalHelper');
+          const modalIcon = document.getElementById('adminActionModalIcon');
           const modalConfirm = document.getElementById('adminActionModalConfirm');
           const actionModal = modalElement && window.bootstrap
             ? bootstrap.Modal.getOrCreateInstance(modalElement)
             : null;
           let pendingForm = null;
+          let lastActionButton = null;
           if (!inspector || !canvas || !window.Chart) return;
+          const modalText = @Html.Raw(adminModalTextJson);
+
+          const modalIcons = {
+            lock: '<svg viewBox="0 0 24 24" focusable="false"><rect x="5" y="10" width="14" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>',
+            unlock: '<svg viewBox="0 0 24 24" focusable="false"><rect x="5" y="10" width="14" height="10" rx="2"></rect><path d="M16 10V7a4 4 0 0 0-7.5-1.9"></path></svg>',
+            trash: '<svg viewBox="0 0 24 24" focusable="false"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v5"></path><path d="M14 11v5"></path></svg>',
+            shield: '<svg viewBox="0 0 24 24" focusable="false"><path d="M12 3 19 6v5c0 4.5-2.8 8.4-7 10-4.2-1.6-7-5.5-7-10V6l7-3Z"></path><path d="m9 12 2 2 4-4"></path></svg>'
+          };
+
+          const modalActions = {
+            block: {
+              ...modalText.block,
+              buttonClass: 'btn-warning',
+              toneClass: 'is-warning',
+              icon: modalIcons.lock
+            },
+            unblock: {
+              ...modalText.unblock,
+              buttonClass: 'btn-success',
+              toneClass: 'is-success',
+              icon: modalIcons.unlock
+            },
+            delete: {
+              ...modalText.delete,
+              buttonClass: 'btn-danger',
+              toneClass: 'is-danger',
+              icon: modalIcons.trash
+            },
+            admin: {
+              ...modalText.admin,
+              buttonClass: 'btn-primary',
+              toneClass: 'is-primary',
+              icon: modalIcons.shield
+            }
+          };
+
+          const setModalAction = button => {
+            const config = modalActions[button?.dataset.action || 'delete'] || modalActions.delete;
+            if (modalTitle) modalTitle.textContent = config.title;
+            if (modalMessage) modalMessage.textContent = config.message;
+            if (modalHelper) {
+              modalHelper.textContent = config.helper;
+              modalHelper.hidden = !config.helper;
+            }
+            if (modalIcon) {
+              modalIcon.innerHTML = config.icon;
+              modalIcon.className = `admin-confirm-modal__icon ${config.toneClass}`;
+            }
+            if (modalConfirm) {
+              modalConfirm.textContent = config.confirm;
+              modalConfirm.className = `btn ${config.buttonClass}`;
+              modalConfirm.setAttribute('aria-label', config.confirm);
+            }
+          };
 
           let activity = @Html.Raw(activityJson);
           let visibleActivity = activity;
@@ -478,16 +570,20 @@
           document.querySelectorAll('[data-confirmable-form]').forEach(form => {
             form.addEventListener('submit', event => {
               const button = event.submitter;
-              const message = button?.dataset.confirmMessage;
-              const title = button?.dataset.confirmTitle;
-              if (!message || !actionModal) return;
+              if (!button || !actionModal) return;
 
               event.preventDefault();
               pendingForm = form;
-              if (modalTitle) modalTitle.textContent = title || '@T["ConfirmDelete"]';
-              if (modalMessage) modalMessage.textContent = message;
+              lastActionButton = button;
+              setModalAction(button);
               actionModal.show();
             });
+          });
+
+          modalElement?.addEventListener('hidden.bs.modal', () => {
+            pendingForm = null;
+            lastActionButton?.focus();
+            lastActionButton = null;
           });
 
           modalConfirm?.addEventListener('click', () => {

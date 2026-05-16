@@ -8,7 +8,8 @@ namespace CourseInventory.Web.Controllers;
 
 public class PreferencesController(UserManager<ApplicationUser> users) : Controller
 {
-    [AllowAnonymous, HttpPost, ValidateAntiForgeryToken]
+    [AllowAnonymous]
+    [AcceptVerbs("GET", "POST")]
     public async Task<IActionResult> Set(string? language, string? theme, string? returnUrl)
     {
         if (language is "en" or "fr")

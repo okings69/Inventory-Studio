@@ -49,8 +49,7 @@
                 </form>
                 @if (SignInManager.IsSignedIn(User))
                 {
-                    <form class="app-preferences" asp-controller="Preferences" asp-action="Set" method="post">
-                        @Html.AntiForgeryToken()
+                    <form class="app-preferences" asp-controller="Preferences" asp-action="Set" method="get">
                         <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
                         <input type="hidden" name="language" value="@lang" />
                         <input type="hidden" name="theme" value="@theme" />
@@ -92,8 +91,7 @@
                 }
                 else
                 {
-                    <form class="app-preferences" asp-controller="Preferences" asp-action="Set" method="post">
-                        @Html.AntiForgeryToken()
+                    <form class="app-preferences" asp-controller="Preferences" asp-action="Set" method="get">
                         <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
                         <input type="hidden" name="language" value="@lang" />
                         <div class="dropdown pref-dropdown">

@@ -10,6 +10,7 @@ namespace CourseInventory.Web.Controllers;
 
 public class AccountController(
     IConfiguration configuration,
+    IWebHostEnvironment environment,
     UserManager<ApplicationUser> users,
     SignInManager<ApplicationUser> signIn,
     IUserActivityService userActivity) : Controller
@@ -37,7 +38,7 @@ public class AccountController(
             await signIn.SignInAsync(user, false);
             return RedirectToAction("Index", "Home");
         }
-        foreach (var error in result.Errors) ModelState.AddModelError("", error.Description);
+        ModelState.AddModelError(string.Empty, "Registration could not be completed. Check your email, username, and password.");
         return View(model);
     }
 
@@ -51,7 +52,7 @@ public class AccountController(
             var providerName = string.Equals(externalError, "facebook", StringComparison.OrdinalIgnoreCase)
                 ? FacebookProvider
                 : GoogleProvider;
-            ModelState.AddModelError(string.Empty, $"{providerName} login could not be completed. Please try again.");
+            ModelState.AddModelError(string.Empty, $"{providerName} login is temporarily unavailable. Please use email login or try again later.");
         }
         return View(new LoginViewModel());
     }
@@ -65,7 +66,7 @@ public class AccountController(
         var user = await users.FindByEmailAsync(model.EmailOrUserName) ?? await users.FindByNameAsync(model.EmailOrUserName);
         if (user is null || user.IsBlocked)
         {
-            ModelState.AddModelError("", "Invalid login or blocked account.");
+            ModelState.AddModelError(string.Empty, "Invalid login.");
             return View(model);
         }
         var result = await signIn.PasswordSignInAsync(user, model.Password, model.RememberMe, false);
@@ -74,7 +75,7 @@ public class AccountController(
             await userActivity.RecordLoginAsync(user);
             return LocalRedirect(returnUrl ?? "/");
         }
-        ModelState.AddModelError("", "Invalid login.");
+        ModelState.AddModelError(string.Empty, "Invalid login.");
         return View(model);
     }
 
@@ -97,13 +98,13 @@ public class AccountController(
     {
         if (!string.IsNullOrWhiteSpace(remoteError))
         {
-            return await RenderLoginWithErrorAsync("External login failed. Please try again.", returnUrl);
+            return await RenderLoginWithErrorAsync("External login could not be completed. Please use email login or try again later.", returnUrl);
         }
 
         var info = await signIn.GetExternalLoginInfoAsync();
         if (info is null)
         {
-            return await RenderLoginWithErrorAsync("External login could not be completed.", returnUrl);
+            return await RenderLoginWithErrorAsync("External login could not be completed. Please use email login or try again later.", returnUrl);
         }
 
         var result = await signIn.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, false);
@@ -115,7 +116,7 @@ public class AccountController(
                 if (existingUser.IsBlocked)
                 {
                     await signIn.SignOutAsync();
-                    return await RenderLoginWithErrorAsync("This account is blocked.", returnUrl);
+                    return await RenderLoginWithErrorAsync("External login could not be completed. Please contact support if this continues.", returnUrl);
                 }
 
                 await userActivity.RecordLoginAsync(existingUser);
@@ -127,7 +128,7 @@ public class AccountController(
         var email = info.Principal.FindFirstValue(ClaimTypes.Email);
         if (string.IsNullOrWhiteSpace(email))
         {
-            return await RenderLoginWithErrorAsync("The external provider did not return an email address.", returnUrl);
+            return await RenderLoginWithErrorAsync("External login could not be completed because the provider did not return a verified email address.", returnUrl);
         }
 
         var user = await users.FindByEmailAsync(email);
@@ -143,8 +144,7 @@ public class AccountController(
             var create = await users.CreateAsync(user);
             if (!create.Succeeded)
             {
-                var message = create.Errors.FirstOrDefault()?.Description ?? "External account could not be created.";
-                return await RenderLoginWithErrorAsync(message, returnUrl);
+                return await RenderLoginWithErrorAsync("External account could not be created. Please use email registration or try again later.", returnUrl);
             }
 
             await users.AddToRoleAsync(user, "User");
@@ -152,14 +152,13 @@ public class AccountController(
 
         if (user.IsBlocked)
         {
-            return await RenderLoginWithErrorAsync("This account is blocked.", returnUrl);
+            return await RenderLoginWithErrorAsync("External login could not be completed. Please contact support if this continues.", returnUrl);
         }
 
         var addLogin = await users.AddLoginAsync(user, info);
         if (!addLogin.Succeeded && addLogin.Errors.Any(error => error.Code != "LoginAlreadyAssociated"))
         {
-            var message = addLogin.Errors.FirstOrDefault()?.Description ?? "External login could not be linked.";
-            return await RenderLoginWithErrorAsync(message, returnUrl);
+            return await RenderLoginWithErrorAsync("External login could not be linked. Please use email login or try again later.", returnUrl);
         }
 
         await signIn.SignInAsync(user, false);
@@ -194,6 +193,11 @@ public class AccountController(
     {
         var messages = new List<string>();
 
+        if (!environment.IsDevelopment())
+        {
+            return messages;
+        }
+
         if (!HasProviderCredentials("Authentication:Google:ClientId", "Authentication:Google:ClientSecret"))
         {
             messages.Add("Google login is hidden until Authentication:Google:ClientId and Authentication:Google:ClientSecret are provided through user-secrets or environment variables.");
@@ -213,14 +217,14 @@ public class AccountController(
         {
             return HasProviderCredentials("Authentication:Facebook:AppId", "Authentication:Facebook:AppSecret")
                 ? "Facebook login is currently unavailable. Restart the application and try again."
-                : "Facebook login is not configured on this server. Add Authentication:Facebook:AppId and Authentication:Facebook:AppSecret through user-secrets, then restart the app.";
+                : "Facebook login is not configured on this server.";
         }
 
         if (string.Equals(provider, GoogleProvider, StringComparison.OrdinalIgnoreCase))
         {
             return HasProviderCredentials("Authentication:Google:ClientId", "Authentication:Google:ClientSecret")
                 ? "Google login is currently unavailable. Restart the application and try again."
-                : "Google login is not configured on this server. Add Authentication:Google:ClientId and Authentication:Google:ClientSecret through user-secrets, then restart the app.";
+                : "Google login is not configured on this server.";
         }
 
         return "This external login provider is not available right now.";

@@ -1,2 +1,13 @@
-<h1 class="h3">Access denied</h1>
-<p class="text-body-secondary">You do not have permission to perform this action.</p>
+@inject IUiTextService T
+@{
+    ViewData["Title"] = T["AccessDeniedTitle"];
+}
+
+<section class="state-page">
+    <div class="state-panel">
+        <span class="state-code">403</span>
+        <h1>@T["AccessDeniedTitle"]</h1>
+        <p>@T["AccessDeniedText"]</p>
+        <a class="btn btn-primary" asp-controller="Home" asp-action="Index">@T["Home"]</a>
+    </div>
+</section>

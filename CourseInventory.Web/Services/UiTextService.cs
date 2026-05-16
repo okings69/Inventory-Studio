@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 
 namespace CourseInventory.Web.Services;
 
@@ -265,7 +265,17 @@ public class UiTextService : IUiTextService
         ["AdminUser"] = "Admin user",
         ["RegularUser"] = "Regular user",
         ["CurrentUser"] = "You",
-        ["OnlineThresholdHint"] = "Online if active in the last 5 minutes."
+        ["OnlineThresholdHint"] = "Online if active in the last 5 minutes.",
+        ["ErrorTitle"] = "Something went wrong",
+        ["ErrorText"] = "The request could not be completed. Please try again or return to the dashboard.",
+        ["RequestId"] = "Request ID",
+        ["AccessDeniedTitle"] = "Access denied",
+        ["AccessDeniedText"] = "You do not have permission to perform this action.",
+        ["StartWithFirstItem"] = "Start by adding the first item to this inventory.",
+        ["NoFieldsConfigured"] = "No custom fields configured yet.",
+        ["NoSharedUsers"] = "No users have explicit access yet.",
+        ["NoNumericStats"] = "No numeric statistics available yet.",
+        ["NoFrequentValues"] = "No frequent values available yet."
     };
 
     private static readonly Dictionary<string, string> French = new(StringComparer.OrdinalIgnoreCase)
@@ -324,11 +334,11 @@ public class UiTextService : IUiTextService
         ["CustomIdFormatHelpLabel"] = "Guide du format",
         ["CustomIdFormatHint"] = "Utilisez le format seulement pour DateTime ou Sequence.",
         ["CustomIdTypeFixedTextHelp"] = "Ajoute exactement le texte saisi. Exemple : INV ou HR-",
-        ["CustomIdTypeRandom20BitHelp"] = "Genere un identifiant aleatoire compact sur 20 bits.",
-        ["CustomIdTypeRandom32BitHelp"] = "Genere un identifiant aleatoire plus long sur 32 bits.",
-        ["CustomIdTypeRandom6DigitsHelp"] = "Genere un nombre aleatoire sur 6 chiffres. Exemple : 483027",
-        ["CustomIdTypeRandom9DigitsHelp"] = "Genere un nombre aleatoire sur 9 chiffres. Exemple : 483027154",
-        ["CustomIdTypeGuidHelp"] = "Genere un GUID. Exemple : 3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+        ["CustomIdTypeRandom20BitHelp"] = "Génère un identifiant aléatoire compact sur 20 bits.",
+        ["CustomIdTypeRandom32BitHelp"] = "Génère un identifiant aléatoire plus long sur 32 bits.",
+        ["CustomIdTypeRandom6DigitsHelp"] = "Génère un nombre aléatoire sur 6 chiffres. Exemple : 483027",
+        ["CustomIdTypeRandom9DigitsHelp"] = "Génère un nombre aléatoire sur 9 chiffres. Exemple : 483027154",
+        ["CustomIdTypeGuidHelp"] = "Génère un GUID. Exemple : 3f2504e0-4f89-11d3-9a0c-0305e82c3301",
         ["CustomIdTypeDateTimeHelp"] = "Ajoute la date ou l'heure actuelle. Exemples : yyyy, yyyy-MM, yyyyMMdd.",
         ["CustomIdTypeSequenceHelp"] = "Ajoute le prochain numero de sequence. Exemples : D3, D4, D5.",
         ["CustomIdFormatDefaultHelp"] = "Exemples : DateTime -> yyyy, yyyy-MM, yyyyMMdd. Sequence -> D3, D4, D5.",
@@ -429,11 +439,11 @@ public class UiTextService : IUiTextService
         ["CreateItem"] = "Créer un article",
         ["EditItem"] = "Modifier l'article",
         ["Back"] = "Retour",
-        ["BackToInventory"] = "Retour a l'inventaire",
-        ["Details"] = "Details",
-        ["CreatedAt"] = "Cree le",
-        ["UpdatedAt"] = "Mis a jour le",
-        ["CreatedBy"] = "Cree par",
+        ["BackToInventory"] = "Retour à l'inventaire",
+        ["Details"] = "Détails",
+        ["CreatedAt"] = "Créé le",
+        ["UpdatedAt"] = "Mis à jour le",
+        ["CreatedBy"] = "Créé par",
         ["NoValue"] = "Aucune valeur",
         ["OpenLink"] = "Ouvrir le lien",
         ["Like"] = "J'aime",
@@ -493,38 +503,48 @@ public class UiTextService : IUiTextService
         ["ShowPassword"] = "Afficher le mot de passe",
         ["HidePassword"] = "Masquer le mot de passe",
         ["AdminOverview"] = "Vue admin",
-        ["AdminOverviewText"] = "Suivez l'activite de connexion, voyez qui est en ligne et gerez les acces depuis une seule interface.",
+        ["AdminOverviewText"] = "Suivez l'activité de connexion, voyez qui est en ligne et gérez les accès depuis une seule interface.",
         ["OnlineNow"] = "En ligne",
         ["OfflineNow"] = "Hors ligne",
-        ["BlockedUsersCount"] = "Utilisateurs bloques",
-        ["Last7DaysLoginActivity"] = "Supervision des acces et de la presence",
+        ["BlockedUsersCount"] = "Utilisateurs bloqués",
+        ["Last7DaysLoginActivity"] = "Supervision des accès et de la présence",
         ["NumberOfLogins"] = "Nombre de connexions",
         ["Date"] = "Date",
         ["Status"] = "Statut",
         ["Online"] = "En ligne",
         ["Offline"] = "Hors ligne",
-        ["LastSeen"] = "Derniere activite",
-        ["LastLogin"] = "Derniere connexion",
+        ["LastSeen"] = "Dernière activité",
+        ["LastLogin"] = "Dernière connexion",
         ["Never"] = "Jamais",
         ["UserManagement"] = "Gestion des utilisateurs",
-        ["UserManagementText"] = "Verifiez les comptes, les roles et la presence en direct.",
+        ["UserManagementText"] = "Vérifiez les comptes, les rôles et la présence en direct.",
         ["Joined"] = "Inscrit",
-        ["HoverChartPoint"] = "Survolez ou ciblez un point pour inspecter cette journee.",
-        ["NoLoginsOnThisDay"] = "Aucune connexion enregistree ce jour-la.",
+        ["HoverChartPoint"] = "Survolez ou ciblez un point pour inspecter cette journée.",
+        ["NoLoginsOnThisDay"] = "Aucune connexion enregistrée ce jour-là.",
         ["LoginSessions"] = "Sessions de connexion",
         ["MostActiveDay"] = "Jour le plus actif",
         ["LiveStatus"] = "Statut en direct",
-        ["LatestLogin"] = "Derniere connexion",
-        ["RecentConnections"] = "Connexions recentes",
+        ["LatestLogin"] = "Dernière connexion",
+        ["RecentConnections"] = "Connexions récentes",
         ["AutoRefresh"] = "Actualisation automatique toutes les 10 secondes",
         ["ConfirmBlockUser"] = "Bloquer cet utilisateur ?",
         ["ConfirmDeleteUser"] = "Supprimer cet utilisateur ?",
-        ["ConfirmRemoveAdmin"] = "Retirer le role admin a cet utilisateur ?",
+        ["ConfirmRemoveAdmin"] = "Retirer le rôle admin à cet utilisateur ?",
         ["CannotEditSelf"] = "Vous ne pouvez pas effectuer cette action sur votre propre compte.",
         ["AdminUser"] = "Utilisateur admin",
         ["RegularUser"] = "Utilisateur standard",
         ["CurrentUser"] = "Vous",
-        ["OnlineThresholdHint"] = "En ligne si actif dans les 5 dernieres minutes."
+        ["OnlineThresholdHint"] = "En ligne si actif dans les 5 dernières minutes.",
+        ["ErrorTitle"] = "Une erreur est survenue",
+        ["ErrorText"] = "La requête n'a pas pu être terminée. Réessayez ou revenez au tableau de bord.",
+        ["RequestId"] = "ID de requête",
+        ["AccessDeniedTitle"] = "Accès refusé",
+        ["AccessDeniedText"] = "Vous n'avez pas l'autorisation d'effectuer cette action.",
+        ["StartWithFirstItem"] = "Commencez par ajouter le premier article à cet inventaire.",
+        ["NoFieldsConfigured"] = "Aucun champ personnalisé n'est encore configuré.",
+        ["NoSharedUsers"] = "Aucun utilisateur n'a encore d'accès explicite.",
+        ["NoNumericStats"] = "Aucune statistique numérique disponible pour le moment.",
+        ["NoFrequentValues"] = "Aucune valeur fréquente disponible pour le moment."
     };
 
     public string this[string key]
@@ -536,3 +556,4 @@ public class UiTextService : IUiTextService
         }
     }
 }
+

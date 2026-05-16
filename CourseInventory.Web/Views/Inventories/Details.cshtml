@@ -211,8 +211,11 @@
                             else
                             {
                                 <tr>
-                                    <td colspan="@(tableFields.Count + (canEditItems ? 4 : 3))" class="text-center text-body-secondary py-4">
-                                        @T["NoItemsFound"]
+                                    <td colspan="@(tableFields.Count + (canEditItems ? 4 : 3))">
+                                        <div class="empty-state empty-state-table">
+                                            <strong>@T["NoItemsFound"]</strong>
+                                            <span>@T["StartWithFirstItem"]</span>
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -357,6 +360,10 @@
                     </form>
                 }
                 <div class="builder-list">
+                    @if (!inventory.CustomIdElements.Any())
+                    {
+                        <div class="empty-state">@T["CustomIdPreview"]</div>
+                    }
                     @foreach (var element in inventory.CustomIdElements.OrderBy(e => e.SortOrder))
                     {
                         <article class="builder-row">
@@ -395,6 +402,10 @@
                     </form>
                 }
                 <div class="field-grid">
+                    @if (!fields.Any())
+                    {
+                        <div class="empty-state">@T["NoFieldsConfigured"]</div>
+                    }
                     @foreach (var field in fields)
                     {
                         <article class="field-card">
@@ -469,6 +480,10 @@
                     </form>
                 }
                 <div class="builder-list">
+                    @if (!inventory.Accesses.Any())
+                    {
+                        <div class="empty-state">@T["NoSharedUsers"]</div>
+                    }
                     @foreach (var row in inventory.Accesses.OrderBy(a => a.User!.UserName))
                     {
                         <article class="builder-row">
@@ -502,9 +517,16 @@
                         <table class="table app-table compact-table">
                             <thead><tr><th>@T["Field"]</th><th>@T["Min"]</th><th>@T["Max"]</th><th>@T["Average"]</th></tr></thead>
                             <tbody>
-                            @foreach (var stat in Model.Stats!.NumberStats)
+                            @if (Model.Stats!.NumberStats.Any())
                             {
-                                <tr><td>@stat.Key</td><td>@stat.Value.Min</td><td>@stat.Value.Max</td><td>@stat.Value.Average</td></tr>
+                                @foreach (var stat in Model.Stats!.NumberStats)
+                                {
+                                    <tr><td>@stat.Key</td><td>@stat.Value.Min</td><td>@stat.Value.Max</td><td>@stat.Value.Average</td></tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td colspan="4"><div class="empty-state empty-state-table">@T["NoNumericStats"]</div></td></tr>
                             }
                             </tbody>
                         </table>
@@ -512,9 +534,16 @@
                     <div class="col-lg-6">
                         <h3 class="h6">@T["FrequentValues"]</h3>
                         <div class="builder-list">
-                            @foreach (var stat in Model.Stats!.FrequentTextValues)
+                            @if (Model.Stats!.FrequentTextValues.Any())
                             {
-                                <article class="builder-row"><div><strong>@stat.Key</strong><span>@string.Join(", ", stat.Value.Select(v => $"{v.Value} ({v.Count})"))</span></div></article>
+                                @foreach (var stat in Model.Stats!.FrequentTextValues)
+                                {
+                                    <article class="builder-row"><div><strong>@stat.Key</strong><span>@string.Join(", ", stat.Value.Select(v => $"{v.Value} ({v.Count})"))</span></div></article>
+                                }
+                            }
+                            else
+                            {
+                                <div class="empty-state">@T["NoFrequentValues"]</div>
                             }
                         </div>
                     </div>

@@ -1,11 +1,13 @@
 @using Microsoft.AspNetCore.Identity
+@using System.Globalization
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 @inject IUiTextService T
 @{
     var currentUser = User.Identity?.IsAuthenticated == true ? await UserManager.GetUserAsync(User) : null;
     var theme = currentUser?.PreferredTheme ?? "light";
-    var lang = currentUser?.PreferredLanguage ?? "en";
+    var cultureLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName is "fr" ? "fr" : "en";
+    var lang = currentUser?.PreferredLanguage ?? cultureLang;
 }
 <!DOCTYPE html>
 <html lang="@lang" data-bs-theme="@theme">
@@ -90,6 +92,20 @@
                 }
                 else
                 {
+                    <form class="app-preferences" asp-controller="Preferences" asp-action="Set" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                        <input type="hidden" name="language" value="@lang" />
+                        <div class="dropdown pref-dropdown">
+                            <button class="btn pref-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="@T["Language"]">
+                                @lang.ToUpperInvariant()
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end pref-menu">
+                                <li><button class="dropdown-item @(lang == "en" ? "active" : "")" type="button" data-pref-field="language" data-pref-value="en">EN</button></li>
+                                <li><button class="dropdown-item @(lang == "fr" ? "active" : "")" type="button" data-pref-field="language" data-pref-value="fr">FR</button></li>
+                            </ul>
+                        </div>
+                    </form>
                     <div class="d-flex gap-2">
                         <a class="btn btn-outline-secondary btn-sm" asp-controller="Account" asp-action="Login">@T["Login"]</a>
                         <a class="btn btn-primary btn-sm" asp-controller="Account" asp-action="Register">@T["Register"]</a>

@@ -1,5 +1,6 @@
 using CourseInventory.Web.Data;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +20,12 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<DbContextOptions<ApplicationDbContext>>();
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseInMemoryDatabase($"inventory-integration-{Guid.NewGuid()}"));
+
+            var dataProtectionKeys = new DirectoryInfo(
+                Path.Combine(AppContext.BaseDirectory, "DataProtection-Keys"));
+            services.AddDataProtection()
+                .PersistKeysToFileSystem(dataProtectionKeys)
+                .SetApplicationName("CourseInventory.Tests");
         });
     }
 }

@@ -95,6 +95,23 @@ http://localhost:5158/signin-google
 http://localhost:5158/signin-facebook
 ```
 
+On Render, configure social login only through environment variables:
+
+```text
+Authentication__Google__ClientId
+Authentication__Google__ClientSecret
+Authentication__Facebook__AppId
+Authentication__Facebook__AppSecret
+```
+
+The production Facebook callback URL is:
+
+```text
+https://YOUR-SERVICE.onrender.com/signin-facebook
+```
+
+If Facebook Login is not approved for production yet, leave the Facebook variables empty or keep the Meta app in development mode for test users only. Inventory Studio hides the Facebook button when the credentials are absent and shows a generic login error if the provider rejects a production login.
+
 Or use the included helper:
 
 ```powershell

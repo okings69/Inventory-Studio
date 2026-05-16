@@ -61,6 +61,16 @@ https://YOUR-SERVICE.onrender.com/signin-google
 https://YOUR-SERVICE.onrender.com/signin-facebook
 ```
 
+For Facebook Login in Meta Developers:
+
+1. Open the Meta app used for Inventory Studio.
+2. Add the Render production URL above to **Valid OAuth Redirect URIs**.
+3. Keep the local URL only for local development.
+4. Set `Authentication__Facebook__AppId` and `Authentication__Facebook__AppSecret` in Render environment variables. Do not put these values in `appsettings.json`.
+5. Redeploy or restart the Render service after changing credentials.
+
+If the Meta app is still in development mode or Facebook Login has not been approved for production, the application remains safe: the Facebook button is only rendered when credentials are configured, and remote provider failures return the user to email login with a generic message.
+
 Keep local callbacks for development:
 
 ```text

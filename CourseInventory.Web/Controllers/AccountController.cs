@@ -29,7 +29,13 @@ public class AccountController(
     public async Task<IActionResult> Register(RegisterViewModel model)
     {
         await PopulateExternalLoginStateAsync();
+        model.Email = (model.Email ?? string.Empty).Trim();
+        model.UserName = (model.UserName ?? string.Empty).Trim();
+        ModelState.Clear();
+        TryValidateModel(model);
+
         if (!ModelState.IsValid) return View(model);
+
         var user = new ApplicationUser { UserName = model.UserName, Email = model.Email, EmailConfirmed = true };
         var result = await users.CreateAsync(user, model.Password);
         if (result.Succeeded)
@@ -38,7 +44,12 @@ public class AccountController(
             await signIn.SignInAsync(user, false);
             return RedirectToAction("Index", "Home");
         }
-        ModelState.AddModelError(string.Empty, "Registration could not be completed. Check your email, username, and password.");
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
         return View(model);
     }
 
@@ -62,7 +73,12 @@ public class AccountController(
     {
         ViewBag.ReturnUrl = returnUrl;
         await PopulateExternalLoginStateAsync();
+        model.EmailOrUserName = (model.EmailOrUserName ?? string.Empty).Trim();
+        ModelState.Clear();
+        TryValidateModel(model);
+
         if (!ModelState.IsValid) return View(model);
+
         var user = await users.FindByEmailAsync(model.EmailOrUserName) ?? await users.FindByNameAsync(model.EmailOrUserName);
         if (user is null || user.IsBlocked)
         {

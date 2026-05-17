@@ -34,9 +34,16 @@
             helper = T["DeleteUserHelper"],
             confirm = T["ConfirmDeleteUser"]
         },
-        admin = new
+        grantAdmin = new
         {
-            title = T["Admin"],
+            title = T["MakeAdmin"],
+            message = T["ConfirmAddAdmin"],
+            helper = "",
+            confirm = T["Save"]
+        },
+        removeAdmin = new
+        {
+            title = T["RemoveAdmin"],
             message = T["ConfirmRemoveAdmin"],
             helper = "",
             confirm = T["Save"]
@@ -109,6 +116,8 @@
                         var disableReason = user.DisabledActionReason ?? T["CannotEditSelf"];
                         var blockAction = user.IsBlocked ? "unblock" : "block";
                         var blockLabel = user.IsBlocked ? T["Unblock"] : T["Block"];
+                        var adminAction = user.IsAdmin ? "removeAdmin" : "grantAdmin";
+                        var adminLabel = user.IsAdmin ? T["RemoveAdmin"] : T["MakeAdmin"];
                         <tr class="@(user.IsAdmin ? "admin-user-row is-admin" : "admin-user-row") @(user.IsCurrentUser ? "is-self" : string.Empty)"
                             data-row-title="@($"{user.UserName} - {(user.IsAdmin ? T["AdminUser"] : T["RegularUser"])}")"
                             data-user-id="@user.Id"
@@ -172,11 +181,11 @@
                                         <input type="hidden" name="id" value="@user.Id" />
                                         <button class="btn btn-sm btn-outline-primary"
                                                 type="submit"
-                                                data-action="admin"
+                                                data-action="@adminAction"
                                                 data-user-name="@user.UserName"
-                                                aria-label="@(user.CanToggleAdmin ? T["Admin"] : disableReason)"
+                                                aria-label="@(user.CanToggleAdmin ? adminLabel : disableReason)"
                                                 disabled="@(!user.CanToggleAdmin)">
-                                            @T["Admin"]
+                                            @adminLabel
                                         </button>
                                     </form>
                                     <form asp-action="Delete" method="post" data-confirmable-form>
@@ -336,8 +345,14 @@
               toneClass: 'is-danger',
               icon: modalIcons.trash
             },
-            admin: {
-              ...modalText.admin,
+            grantAdmin: {
+              ...modalText.grantAdmin,
+              buttonClass: 'btn-primary',
+              toneClass: 'is-primary',
+              icon: modalIcons.shield
+            },
+            removeAdmin: {
+              ...modalText.removeAdmin,
               buttonClass: 'btn-primary',
               toneClass: 'is-primary',
               icon: modalIcons.shield

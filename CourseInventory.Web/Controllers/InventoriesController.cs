@@ -141,6 +141,17 @@ public class InventoriesController(
         return RedirectToAction(nameof(Details), new { id = model.Id });
     }
 
+    [Authorize, HttpGet]
+    public IActionResult Delete(int? id)
+    {
+        if (id.GetValueOrDefault() > 0)
+        {
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
     [Authorize, HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {

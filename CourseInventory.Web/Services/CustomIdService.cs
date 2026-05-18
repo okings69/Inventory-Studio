@@ -74,11 +74,50 @@ public class CustomIdService(ApplicationDbContext db) : ICustomIdService
                 CustomIdElementType.Random6Digits => RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6"),
                 CustomIdElementType.Random9Digits => RandomNumberGenerator.GetInt32(0, 1_000_000_000).ToString("D9"),
                 CustomIdElementType.Guid => Guid.NewGuid().ToString(e.Format is "N" or "D" ? e.Format : "N"),
-                CustomIdElementType.DateTime => DateTime.UtcNow.ToString(string.IsNullOrWhiteSpace(e.Format) ? "yyyyMMdd" : e.Format),
-                CustomIdElementType.Sequence => sequence.ToString(string.IsNullOrWhiteSpace(e.Format) ? "D5" : e.Format),
+                CustomIdElementType.DateTime => DateTime.UtcNow.ToString(string.IsNullOrWhiteSpace(e.Format) ? "yyyyMMdd" : e.Format.Trim()),
+                CustomIdElementType.Sequence => FormatSequence(sequence, e.Format),
                 _ => string.Empty
             });
         }
         return sb.ToString();
+    }
+
+    private static string FormatSequence(int sequence, string? format)
+    {
+        var effectiveFormat = string.IsNullOrWhiteSpace(format) ? "D5" : format.Trim();
+        if (!TryGetDecimalWidth(effectiveFormat, out var width))
+        {
+            return sequence.ToString(effectiveFormat);
+        }
+
+        var digits = sequence.ToString();
+        if (digits.Length > width)
+        {
+            throw new InvalidOperationException($"Sequence value {sequence} exceeds format {effectiveFormat}. Use a wider sequence format.");
+        }
+
+        return sequence.ToString($"D{width}");
+    }
+
+    private static bool TryGetDecimalWidth(string format, out int width)
+    {
+        width = 0;
+        if (format.Length < 2 || format[0] is not ('D' or 'd'))
+        {
+            return false;
+        }
+
+        foreach (var c in format[1..])
+        {
+            if (!char.IsDigit(c))
+            {
+                width = 0;
+                return false;
+            }
+
+            width = (width * 10) + (c - '0');
+        }
+
+        return true;
     }
 }

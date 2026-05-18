@@ -20,7 +20,11 @@ public record SearchResultItem(string Type, int Id, string Title, string? Snippe
 public record InventoryStats(
     int ItemCount,
     int TotalLikes,
-    IReadOnlyDictionary<string, (decimal? Min, decimal? Max, decimal? Average)> NumberStats,
-    IReadOnlyDictionary<string, IReadOnlyList<(string Value, int Count)>> FrequentTextValues);
+    IReadOnlyDictionary<string, NumberFieldStats> NumberStats,
+    IReadOnlyDictionary<string, FrequentFieldStats> FrequentTextValues);
+
+public record NumberFieldStats(string FieldKey, string Label, decimal? Min, decimal? Max, decimal? Average);
+public record FrequentFieldStats(string FieldKey, string Label, IReadOnlyList<FrequentValueStats> Values);
+public record FrequentValueStats(string Value, int Count);
 
 public record FieldSlot(InventoryFieldType Type, string Key);

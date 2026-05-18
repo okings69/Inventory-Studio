@@ -16,6 +16,7 @@ public class ExportController(
     UserManager<ApplicationUser> users) : Controller
 {
     private const string ExcelDelimiter = ";";
+    private const string ExportDateTimeFormat = "yyyy-MM-dd HH:mm:ss";
 
     public async Task<IActionResult> Csv(int inventoryId)
     {
@@ -70,7 +71,7 @@ public class ExportController(
 
             values.AddRange(exportFields.Select(field => FormatFieldValue(GetFieldValue(item, field.FieldKey))));
             values.Add(item.Likes.Count.ToString(CultureInfo.InvariantCulture));
-            values.Add(item.UpdatedAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture));
+            values.Add(item.UpdatedAt.ToLocalTime().ToString(ExportDateTimeFormat, CultureInfo.InvariantCulture));
 
             rows.Add(BuildCsvRow(values));
         }

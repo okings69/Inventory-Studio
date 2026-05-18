@@ -3,9 +3,11 @@
     ViewData["Title"] = T["Home"];
     var latest = (IReadOnlyList<Inventory>)ViewBag.Latest;
     var popular = (IReadOnlyList<Inventory>)ViewBag.Popular;
+    var popularLikeCounts = (IReadOnlyDictionary<int, int>)ViewBag.PopularLikeCounts;
     var tags = (IReadOnlyList<Tag>)ViewBag.Tags;
     var totalInventories = (int)ViewBag.TotalInventories;
     var totalItems = (int)ViewBag.TotalItems;
+    var totalLikes = (int)ViewBag.TotalLikes;
     var totalUsers = (int)ViewBag.TotalUsers;
 }
 <section class="home-hero mb-4">
@@ -33,6 +35,13 @@
         <strong class="js-count-up" data-count="@totalItems">@totalItems</strong>
     </article>
     <article class="metric stat-card reveal-up" style="--delay: 180ms">
+        <div class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 20.5 10.85 19.45C6.75 15.72 4 13.22 4 10.15A4.05 4.05 0 0 1 8.1 6.05c1.55 0 3.05.72 3.9 1.85a4.92 4.92 0 0 1 3.9-1.85A4.05 4.05 0 0 1 20 10.15c0 3.07-2.75 5.57-6.85 9.3L12 20.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        </div>
+        <span>@T["TotalLikes"]</span>
+        <strong class="js-count-up" data-count="@totalLikes">@totalLikes</strong>
+    </article>
+    <article class="metric stat-card reveal-up" style="--delay: 270ms">
         <div class="stat-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none"><path d="M15.5 19.25v-1.5A3.75 3.75 0 0 0 11.75 14h-3A3.75 3.75 0 0 0 5 17.75v1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M10.25 10.75a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19 19.25v-1.1a3.25 3.25 0 0 0-2.35-3.12M15.75 4.95a2.75 2.75 0 0 1 0 5.35" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </div>
@@ -97,13 +106,13 @@
         <div class="panel">
             <div class="panel-header">
                 <div>
-                    <h2>@T["TopFiveByItems"]</h2>
-                    <p>@T["TopFiveByItemsText"]</p>
+                    <h2>@T["PopularInventories"]</h2>
+                    <p>@T["PopularInventoriesText"]</p>
                 </div>
             </div>
             <div class="table-responsive">
                 <table class="table app-table compact-table table-hover align-middle js-table">
-                    <thead><tr><th>@T["Inventory"]</th><th class="text-end">@T["Items"]</th></tr></thead>
+                    <thead><tr><th>@T["Inventory"]</th><th class="text-end">@T["Items"]</th><th class="text-end">@T["Likes"]</th></tr></thead>
                     <tbody>
                     @foreach (var item in popular)
                     {
@@ -113,6 +122,7 @@
                                 <div class="table-subtitle">@item.Category</div>
                             </td>
                             <td class="text-end"><span class="count-pill">@item.ItemCount</span></td>
+                            <td class="text-end"><span class="count-pill">@popularLikeCounts.GetValueOrDefault(item.Id)</span></td>
                         </tr>
                     }
                     </tbody>

@@ -26,18 +26,27 @@ public class HomeController(
             .Take(12)
             .ToListAsync();
 
-        var popular = await readableInventories
+        var popularRows = await readableInventories
             .Include(i => i.Owner)
-            .OrderByDescending(i => i.Items.Count)
-            .ThenByDescending(i => i.UpdatedAt)
+            .Select(i => new
+            {
+                Inventory = i,
+                LikeCount = db.ItemLikes.Count(like => like.Item != null && like.Item.InventoryId == i.Id)
+            })
+            .OrderByDescending(row => row.LikeCount)
+            .ThenByDescending(row => row.Inventory.Items.Count)
+            .ThenByDescending(row => row.Inventory.UpdatedAt)
             .Take(5)
             .ToListAsync();
+        var popular = popularRows.Select(row => row.Inventory).ToList();
+        var popularLikeCounts = popularRows.ToDictionary(row => row.Inventory.Id, row => row.LikeCount);
 
         await ApplyItemCountsAsync(latest);
         await ApplyItemCountsAsync(popular);
 
         ViewBag.Latest = latest;
         ViewBag.Popular = popular;
+        ViewBag.PopularLikeCounts = popularLikeCounts;
         ViewBag.Tags = await db.Tags.AsNoTracking()
             .Where(t => t.InventoryTags.Any(it => readableInventoryIds.Contains(it.InventoryId)))
             .OrderByDescending(t => t.InventoryTags.Count(it => readableInventoryIds.Contains(it.InventoryId)))
@@ -46,6 +55,9 @@ public class HomeController(
         ViewBag.TotalInventories = await readableInventories.CountAsync();
         ViewBag.TotalItems = await db.InventoryItems.AsNoTracking()
             .Where(i => readableInventoryIds.Contains(i.InventoryId))
+            .CountAsync();
+        ViewBag.TotalLikes = await db.ItemLikes.AsNoTracking()
+            .Where(like => like.Item != null && readableInventoryIds.Contains(like.Item.InventoryId))
             .CountAsync();
         ViewBag.TotalUsers = await db.Users.AsNoTracking().CountAsync();
         return View();

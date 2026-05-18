@@ -521,7 +521,12 @@
                             {
                                 @foreach (var stat in Model.Stats!.NumberStats)
                                 {
-                                    <tr><td>@stat.Key</td><td>@stat.Value.Min</td><td>@stat.Value.Max</td><td>@stat.Value.Average</td></tr>
+                                    <tr>
+                                        <td><span class="stats-field-label" title="@stat.Value.FieldKey">@stat.Value.Label</span></td>
+                                        <td class="text-end">@FormatStatsNumber(stat.Value.Min)</td>
+                                        <td class="text-end">@FormatStatsNumber(stat.Value.Max)</td>
+                                        <td class="text-end">@FormatStatsNumber(stat.Value.Average)</td>
+                                    </tr>
                                 }
                             }
                             else
@@ -538,7 +543,20 @@
                             {
                                 @foreach (var stat in Model.Stats!.FrequentTextValues)
                                 {
-                                    <article class="builder-row"><div><strong>@stat.Key</strong><span>@string.Join(", ", stat.Value.Select(v => $"{v.Value} ({v.Count})"))</span></div></article>
+                                    <article class="builder-row stats-frequent-card">
+                                        <div>
+                                            <strong title="@stat.Value.FieldKey">@stat.Value.Label</strong>
+                                            <span class="frequent-values-list">
+                                                @foreach (var value in stat.Value.Values)
+                                                {
+                                                    <span class="frequent-value-chip" title="@value.Value">
+                                                        <span class="frequent-value-text">@value.Value</span>
+                                                        <span class="count-pill">@value.Count</span>
+                                                    </span>
+                                                }
+                                            </span>
+                                        </div>
+                                    </article>
                                 }
                             }
                             else
@@ -593,6 +611,9 @@
         bool boolean => boolean ? "Yes" : "No",
         _ => value.ToString() ?? "-"
     };
+
+    static string FormatStatsNumber(decimal? value) =>
+        value.HasValue ? value.Value.ToString("0.##") : "-";
 
     static string GetStatusBadgeClass(InventoryField field, object? value)
     {

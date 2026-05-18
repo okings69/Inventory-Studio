@@ -1295,12 +1295,52 @@ body,
 .builder-row div {
   display: grid;
   gap: .15rem;
+  min-width: 0;
 }
 
 .builder-row span,
 .field-card span,
 .field-card p {
   color: var(--text-muted);
+}
+
+.stats-field-label {
+  display: inline-block;
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+
+.stats-frequent-card {
+  align-items: flex-start;
+}
+
+.frequent-values-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  min-width: 0;
+}
+
+.frequent-value-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  gap: .45rem;
+  padding: .35rem .45rem .35rem .6rem;
+  border: 1px solid var(--premium-border);
+  border-radius: 999px;
+  background: var(--card-bg-raised);
+}
+
+.frequent-value-text {
+  display: inline-block;
+  max-width: min(28rem, 58vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .custom-id-help-input {

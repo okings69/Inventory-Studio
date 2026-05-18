@@ -24,8 +24,7 @@ body,
     background-color .24s ease,
     border-color .24s ease,
     color .24s ease,
-    box-shadow .24s ease,
-    transform .18s ease;
+    box-shadow .24s ease;
 }
 
 .home-hero {
@@ -749,7 +748,6 @@ body,
 }
 
 .inventory-data-table tbody tr:hover {
-  transform: scale(1.002);
   background: color-mix(in srgb, var(--primary) 8%, transparent);
 }
 

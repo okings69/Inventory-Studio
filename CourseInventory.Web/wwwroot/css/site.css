@@ -255,7 +255,7 @@ html { font-size: 15px; }
 }
 
 .app-table tbody tr {
-  transition: background-color .16s ease, transform .16s ease;
+  transition: background-color .16s ease;
 }
 
 .app-table tbody tr:hover {

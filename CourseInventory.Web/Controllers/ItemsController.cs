@@ -81,6 +81,22 @@ public class ItemsController(
         });
     }
 
+    [Authorize, HttpGet]
+    public IActionResult Save(int? id, int? inventoryId)
+    {
+        if (id.GetValueOrDefault() > 0)
+        {
+            return RedirectToAction(nameof(Edit), new { id });
+        }
+
+        if (inventoryId.GetValueOrDefault() > 0)
+        {
+            return RedirectToAction("Details", "Inventories", new { id = inventoryId });
+        }
+
+        return RedirectToAction("Index", "Inventories");
+    }
+
     [Authorize, HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Save(ItemFormViewModel model)
     {

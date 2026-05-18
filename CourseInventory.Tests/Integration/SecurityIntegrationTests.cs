@@ -28,6 +28,17 @@ public class SecurityIntegrationTests(TestWebApplicationFactory factory)
     }
 
     [Fact]
+    public async Task ItemsSaveGet_RedirectsAnonymousUserToLogin()
+    {
+        var client = factory.CreateClient(new() { AllowAutoRedirect = false });
+
+        var response = await client.GetAsync("/Items/Save");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("/Account/Login", response.Headers.Location?.ToString());
+    }
+
+    [Fact]
     public async Task CreateInventoryPost_RedirectsAnonymousUserBeforeCreatingData()
     {
         var client = factory.CreateClient(new() { AllowAutoRedirect = false });

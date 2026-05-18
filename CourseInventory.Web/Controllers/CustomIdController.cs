@@ -12,12 +12,14 @@ namespace CourseInventory.Web.Controllers;
 [Authorize]
 public class CustomIdController(ApplicationDbContext db, IAccessService access, ICustomIdService customIds, UserManager<ApplicationUser> users) : Controller
 {
+    private const string CustomIdTab = "customid";
+
     [HttpGet]
     public IActionResult Add(int? inventoryId)
     {
         if (inventoryId is > 0)
         {
-            return RedirectToAction("Details", "Inventories", new { id = inventoryId }, "customid");
+            return RedirectToAction("Details", "Inventories", new { id = inventoryId }, CustomIdTab);
         }
 
         return RedirectToAction("Index", "Inventories");
@@ -42,7 +44,7 @@ public class CustomIdController(ApplicationDbContext db, IAccessService access, 
         var max = await db.CustomIdElements.Where(e => e.InventoryId == inventoryId).Select(e => (int?)e.SortOrder).MaxAsync() ?? 0;
         db.CustomIdElements.Add(new CustomIdElement { InventoryId = inventoryId, ElementType = elementType, FixedValue = fixedValue, Format = format, SortOrder = max + 10 });
         await db.SaveChangesAsync();
-        return RedirectToAction("Details", "Inventories", new { id = inventoryId }, "customid");
+        return RedirectToAction("Details", "Inventories", new { id = inventoryId }, CustomIdTab);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -52,7 +54,7 @@ public class CustomIdController(ApplicationDbContext db, IAccessService access, 
         var element = await db.CustomIdElements.FindAsync(id);
         if (element is not null) db.CustomIdElements.Remove(element);
         await db.SaveChangesAsync();
-        return RedirectToAction("Details", "Inventories", new { id = inventoryId });
+        return RedirectToAction("Details", "Inventories", new { id = inventoryId }, CustomIdTab);
     }
 
     public async Task<IActionResult> Preview(int inventoryId) => Json(new { preview = await customIds.PreviewAsync(inventoryId) });

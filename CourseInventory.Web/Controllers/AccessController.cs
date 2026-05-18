@@ -9,6 +9,8 @@ namespace CourseInventory.Web.Controllers;
 [Authorize]
 public class AccessController(IAccessService access, UserManager<ApplicationUser> users) : Controller
 {
+    private const string AccessTab = "access";
+
     public async Task<IActionResult> Users(int inventoryId, string term)
     {
         var actor = (await users.GetUserAsync(User))!;
@@ -26,7 +28,7 @@ public class AccessController(IAccessService access, UserManager<ApplicationUser
     {
         var result = await access.GrantAsync(inventoryId, userId, (await users.GetUserAsync(User))!);
         TempData[result.Success ? "Success" : "Error"] = result.Error ?? "Access granted.";
-        return RedirectToAction("Details", "Inventories", new { id = inventoryId });
+        return RedirectToAction("Details", "Inventories", new { id = inventoryId }, AccessTab);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -34,6 +36,6 @@ public class AccessController(IAccessService access, UserManager<ApplicationUser
     {
         var result = await access.RevokeAsync(inventoryId, userId, (await users.GetUserAsync(User))!);
         TempData[result.Success ? "Success" : "Error"] = result.Error ?? "Access revoked.";
-        return RedirectToAction("Details", "Inventories", new { id = inventoryId });
+        return RedirectToAction("Details", "Inventories", new { id = inventoryId }, AccessTab);
     }
 }

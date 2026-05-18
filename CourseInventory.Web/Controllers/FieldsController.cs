@@ -10,13 +10,15 @@ namespace CourseInventory.Web.Controllers;
 [Authorize]
 public class FieldsController(IFieldService fields, IAccessService access, UserManager<ApplicationUser> users) : Controller
 {
+    private const string FieldsTab = "fields";
+
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Add(int inventoryId, InventoryFieldType fieldType, string title, string? description)
     {
         if (!(await access.GetAccessAsync(inventoryId, (await users.GetUserAsync(User))!)).CanManage) return Forbid();
         var result = await fields.AddAsync(inventoryId, fieldType, title, description);
         TempData[result.Success ? "Success" : "Error"] = result.Error ?? "Field added.";
-        return RedirectToAction("Details", "Inventories", new { id = inventoryId });
+        return RedirectToAction("Details", "Inventories", new { id = inventoryId }, FieldsTab);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -24,7 +26,7 @@ public class FieldsController(IFieldService fields, IAccessService access, UserM
     {
         if (!(await access.GetAccessAsync(field.InventoryId, (await users.GetUserAsync(User))!)).CanManage) return Forbid();
         await fields.UpdateAsync(field);
-        return RedirectToAction("Details", "Inventories", new { id = field.InventoryId });
+        return RedirectToAction("Details", "Inventories", new { id = field.InventoryId }, FieldsTab);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -32,6 +34,6 @@ public class FieldsController(IFieldService fields, IAccessService access, UserM
     {
         if (!(await access.GetAccessAsync(inventoryId, (await users.GetUserAsync(User))!)).CanManage) return Forbid();
         await fields.DeleteAsync(id);
-        return RedirectToAction("Details", "Inventories", new { id = inventoryId });
+        return RedirectToAction("Details", "Inventories", new { id = inventoryId }, FieldsTab);
     }
 }

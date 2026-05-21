@@ -70,13 +70,6 @@ public class AdminController(
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleAdmin(string id)
     {
-        var currentUser = await users.GetUserAsync(User);
-        if (currentUser is not null && currentUser.Id == id)
-        {
-            TempData["Error"] = "You cannot change your own admin role.";
-            return RedirectToAction(nameof(Users));
-        }
-
         var user = await users.FindByIdAsync(id);
         if (user is not null)
         {
@@ -189,7 +182,7 @@ public class AdminController(
                 IsCurrentUser = currentUser is not null && user.Id == currentUser.Id,
                 CanBlock = currentUser is null || user.Id != currentUser.Id,
                 CanDelete = currentUser is null || user.Id != currentUser.Id,
-                CanToggleAdmin = currentUser is null || user.Id != currentUser.Id,
+                CanToggleAdmin = true,
                 DisabledActionReason = currentUser is not null && user.Id == currentUser.Id
                     ? "Self actions are disabled for security."
                     : null,

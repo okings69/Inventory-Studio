@@ -57,5 +57,33 @@ public class CustomIdController(ApplicationDbContext db, IAccessService access, 
         return RedirectToAction("Details", "Inventories", new { id = inventoryId }, CustomIdTab);
     }
 
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reorder(int inventoryId, [FromForm] int[] ids)
+    {
+        if (!(await access.GetAccessAsync(inventoryId, (await users.GetUserAsync(User))!)).CanManage) return Forbid();
+
+        var orderedIds = ids.Distinct().ToArray();
+        if (orderedIds.Length == 0)
+        {
+            return Json(new { ok = false, error = "No elements supplied." });
+        }
+
+        var elements = await db.CustomIdElements
+            .Where(e => e.InventoryId == inventoryId && orderedIds.Contains(e.Id))
+            .ToListAsync();
+        var elementMap = elements.ToDictionary(e => e.Id);
+
+        for (var i = 0; i < orderedIds.Length; i++)
+        {
+            if (elementMap.TryGetValue(orderedIds[i], out var element))
+            {
+                element.SortOrder = (i + 1) * 10;
+            }
+        }
+
+        await db.SaveChangesAsync();
+        return Json(new { ok = true, preview = await customIds.PreviewAsync(inventoryId) });
+    }
+
     public async Task<IActionResult> Preview(int inventoryId) => Json(new { preview = await customIds.PreviewAsync(inventoryId) });
 }

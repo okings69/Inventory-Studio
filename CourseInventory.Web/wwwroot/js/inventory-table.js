@@ -16,14 +16,10 @@
   const textFilter = document.getElementById('inventoryTextFilter');
   const accessFilter = document.getElementById('inventoryAccessFilter');
   const emptyState = document.querySelector('[data-empty-state]');
-  const visualGrid = document.querySelector('[data-inventory-visual-grid]');
-  const visualCards = Array.from(document.querySelectorAll('[data-visual-card]'));
-  const visualEmptyState = document.querySelector('[data-visual-empty-state]');
   const prevButton = document.querySelector('[data-page-prev]');
   const nextButton = document.querySelector('[data-page-next]');
   const pageStatus = document.querySelector('[data-page-status]');
   const pagination = document.querySelector('.table-pagination');
-  const viewButtons = Array.from(document.querySelectorAll('[data-view-mode]'));
   const modalElement = document.querySelector('[data-confirm-delete-modal]');
   const modalMessage = document.querySelector('[data-delete-message]');
   const confirmDeleteButton = document.querySelector('[data-confirm-delete]');
@@ -40,7 +36,6 @@
   let currentPage = 1;
   let sort = { key: 'updated', direction: 'desc' };
   let confirmedDelete = false;
-  let currentView = localStorage.getItem('inventoryViewMode') === 'visual' ? 'visual' : 'table';
 
   const getSelectedRows = () => rows.filter(row => row.querySelector('[data-row-select]')?.checked);
 
@@ -115,51 +110,10 @@
     syncSelection();
   };
 
-  const renderVisual = () => {
-    const term = (textFilter?.value || '').trim().toLowerCase();
-    const access = (accessFilter?.value || '').trim().toLowerCase();
-    let visibleCount = 0;
-
-    visualCards.forEach(card => {
-      const haystack = [
-        card.dataset.title,
-        card.dataset.category,
-        card.dataset.owner
-      ].join(' ').toLowerCase();
-
-      const matches = (!term || haystack.includes(term)) && (!access || card.dataset.access === access);
-      card.hidden = !matches;
-      if (matches) visibleCount += 1;
-    });
-
-    if (visualEmptyState) visualEmptyState.hidden = visibleCount > 0;
-  };
-
-  const syncView = () => {
-    const isVisual = currentView === 'visual';
-    const tableWrapper = table.closest('.table-responsive');
-    if (tableWrapper) tableWrapper.hidden = isVisual;
-    if (visualGrid) visualGrid.hidden = !isVisual;
-    if (pagination) pagination.hidden = isVisual || table.hidden;
-    if (toolbar) toolbar.hidden = isVisual || getSelectedRows().length === 0;
-
-    viewButtons.forEach(button => {
-      const active = button.dataset.viewMode === currentView;
-      button.classList.toggle('is-active', active);
-      button.setAttribute('aria-pressed', active.toString());
-    });
-  };
-
   table.addEventListener('click', event => {
     if (event.target.closest('input, button, a, label')) return;
     const row = event.target.closest('tr[data-href]');
     if (row) window.location.href = row.dataset.href;
-  });
-
-  visualCards.forEach(card => {
-    card.addEventListener('click', () => {
-      if (card.dataset.href) window.location.href = card.dataset.href;
-    });
   });
 
   table.querySelectorAll('[data-row-select]').forEach(checkbox => {
@@ -235,22 +189,10 @@
     input?.addEventListener('input', () => {
       currentPage = 1;
       render();
-      renderVisual();
-      syncView();
     });
     input?.addEventListener('change', () => {
       currentPage = 1;
       render();
-      renderVisual();
-      syncView();
-    });
-  });
-
-  viewButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      currentView = button.dataset.viewMode || 'table';
-      localStorage.setItem('inventoryViewMode', currentView);
-      syncView();
     });
   });
 
@@ -284,6 +226,4 @@
   }
 
   render();
-  renderVisual();
-  syncView();
 })();

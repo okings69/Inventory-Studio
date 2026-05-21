@@ -27,10 +27,6 @@
                       data-inventory-selection-label
                       data-selected-default="@T["SelectRows"]"
                       data-selected-template="@T["SelectedCount"]">@T["SelectRows"]</span>
-                <div class="view-toggle" role="tablist" aria-label="@T["InventoryViewMode"]">
-                    <button class="btn btn-sm btn-outline-secondary is-active" type="button" data-view-mode="table" aria-pressed="true">@T["Table"]</button>
-                    <button class="btn btn-sm btn-outline-secondary" type="button" data-view-mode="visual" aria-pressed="false">@T["Visual"]</button>
-                </div>
             </div>
         </div>
 
@@ -116,46 +112,6 @@
                 </tbody>
             </table>
             <div class="empty-state" data-empty-state hidden>@T["NoInventoriesFound"]</div>
-        </div>
-
-        <div class="inventory-visual-grid" data-inventory-visual-grid hidden>
-            @foreach (var item in Model)
-            {
-                var tags = string.Join(", ", item.InventoryTags.Select(t => t.Tag!.Name));
-                var hasImage = !string.IsNullOrWhiteSpace(item.ImageUrl);
-                <article class="inventory-visual-card"
-                         data-visual-card
-                         data-href="@Url.Action("Details", new { item.Id })"
-                         data-title="@item.Title"
-                         data-category="@item.Category"
-                         data-owner="@(item.Owner?.UserName ?? T["Unknown"])"
-                         data-access="@(item.IsPublic ? "public" : "private")">
-                    <div class="inventory-visual-media">
-                        @if (hasImage)
-                        {
-                            <img src="@item.ImageUrl" alt="@item.Title" loading="lazy" />
-                        }
-                        else
-                        {
-                            <div class="inventory-visual-placeholder">@item.Category</div>
-                        }
-                    </div>
-                    <div class="inventory-visual-body">
-                        <div class="inventory-visual-meta">
-                            <span class="category-pill">@item.Category</span>
-                            <span class="access-badge @(item.IsPublic ? "is-public" : "is-private")">@(item.IsPublic ? T["Public"] : T["Private"])</span>
-                        </div>
-                        <h3>@item.Title</h3>
-                        <p>@(!string.IsNullOrWhiteSpace(item.DescriptionMarkdown) ? item.DescriptionMarkdown.Split('\n').FirstOrDefault(line => !string.IsNullOrWhiteSpace(line) && !line.TrimStart().StartsWith("#")) ?? T["OpenInventory"] : T["OpenInventory"])</p>
-                        <div class="inventory-visual-stats">
-                            <span>@(item.Owner?.UserName ?? T["Unknown"])</span>
-                            <span>@string.Format(T["ItemsCountLabel"], item.ItemCount)</span>
-                            <span>@(!string.IsNullOrWhiteSpace(tags) ? tags : "-")</span>
-                        </div>
-                    </div>
-                </article>
-            }
-            <div class="empty-state" data-visual-empty-state hidden>@T["NoInventoriesFound"]</div>
         </div>
 
         <div class="table-pagination">

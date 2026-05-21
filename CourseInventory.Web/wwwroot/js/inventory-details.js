@@ -147,6 +147,9 @@
   const customIdTypeSelect = document.querySelector('[data-customid-type-select]');
   const customIdTypeHelpButton = document.querySelector('[data-customid-type-help]');
   const customIdFormatHelpButton = document.querySelector('[data-customid-format-help]');
+  const customIdBuilder = document.querySelector('[data-customid-builder]');
+  const customIdList = document.querySelector('[data-customid-list]');
+  const customIdPreview = document.querySelector('[data-customid-preview]');
 
   if (window.bootstrap && customIdTypeSelect && customIdTypeHelpButton && customIdFormatHelpButton) {
     const typePopover = bootstrap.Popover.getOrCreateInstance(customIdTypeHelpButton);
@@ -168,6 +171,117 @@
 
     customIdTypeSelect.addEventListener('change', syncCustomIdHelp);
     syncCustomIdHelp();
+  }
+
+  if (customIdBuilder && customIdList && customIdPreview) {
+    const token = customIdBuilder.querySelector('input[name="__RequestVerificationToken"]')?.value
+      || document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    const addForm = customIdBuilder.querySelector('[data-customid-add-form]');
+    const fixedInput = addForm?.querySelector('input[name="fixedValue"]');
+    const formatInput = addForm?.querySelector('input[name="format"]');
+    let draggedRow = null;
+
+    const pad = (value, width) => String(value).padStart(width, '0');
+    const sequenceValue = format => {
+      const match = /^d(\d+)$/i.exec((format || 'D5').trim());
+      return match ? pad(1, Number(match[1])) : '1';
+    };
+    const dateValue = format => {
+      const now = new Date();
+      const year = String(now.getFullYear());
+      const month = pad(now.getMonth() + 1, 2);
+      const day = pad(now.getDate(), 2);
+      return (format || 'yyyyMMdd')
+        .replaceAll('yyyy', year)
+        .replaceAll('MM', month)
+        .replaceAll('dd', day);
+    };
+    const sampleFor = row => {
+      const type = row.dataset.type;
+      const fixed = row.dataset.fixed || '';
+      const format = row.dataset.format || '';
+
+      if (type === 'FixedText') return fixed;
+      if (type === 'Random20Bit') return 'A1B2C';
+      if (type === 'Random32Bit') return 'A1B2C3D4';
+      if (type === 'Random6Digits') return '123456';
+      if (type === 'Random9Digits') return '123456789';
+      if (type === 'Guid') return format === 'D' ? '3f2504e0-4f89-11d3-9a0c-0305e82c3301' : '3f2504e04f8911d39a0c0305e82c3301';
+      if (type === 'DateTime') return dateValue(format);
+      if (type === 'Sequence') return sequenceValue(format);
+      return '';
+    };
+    const rows = () => Array.from(customIdList.querySelectorAll('[data-customid-row]'));
+    const renderPreview = () => {
+      const savedRows = rows();
+      const draftType = customIdTypeSelect?.selectedOptions?.[0]?.textContent?.trim();
+      const draftFixed = fixedInput?.value?.trim() || '';
+      const draftFormat = formatInput?.value?.trim() || '';
+      const parts = savedRows.map(sampleFor);
+
+      if (draftType && (draftFixed || draftFormat)) {
+        parts.push(sampleFor({ dataset: { type: draftType, fixed: draftFixed, format: draftFormat } }));
+      }
+
+      customIdPreview.textContent = parts.join('') || 'ITEM-00001';
+    };
+    const saveOrder = async () => {
+      if (!token || !customIdBuilder.dataset.reorderUrl) return;
+
+      const payload = new URLSearchParams();
+      payload.set('__RequestVerificationToken', token);
+      payload.set('inventoryId', customIdBuilder.dataset.inventoryId || '');
+      rows().forEach(row => payload.append('ids', row.dataset.id || ''));
+
+      const response = await fetch(customIdBuilder.dataset.reorderUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: payload.toString()
+      });
+
+      if (!response.ok) return;
+      const result = await response.json();
+      if (result.ok && result.preview) customIdPreview.textContent = result.preview;
+    };
+    const rowAfterPointer = y => rows()
+      .filter(row => row !== draggedRow)
+      .reduce((closest, row) => {
+        const box = row.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        return offset < 0 && offset > closest.offset ? { offset, row } : closest;
+      }, { offset: Number.NEGATIVE_INFINITY, row: null }).row;
+
+    rows().forEach(row => {
+      row.addEventListener('dragstart', () => {
+        draggedRow = row;
+        row.classList.add('is-dragging');
+      });
+      row.addEventListener('dragend', async () => {
+        row.classList.remove('is-dragging');
+        draggedRow = null;
+        renderPreview();
+        await saveOrder();
+      });
+    });
+
+    customIdList.addEventListener('dragover', event => {
+      if (!draggedRow) return;
+      event.preventDefault();
+      const after = rowAfterPointer(event.clientY);
+      if (after) customIdList.insertBefore(draggedRow, after);
+      else customIdList.appendChild(draggedRow);
+      renderPreview();
+    });
+
+    [customIdTypeSelect, fixedInput, formatInput].forEach(input => {
+      input?.addEventListener('input', renderPreview);
+      input?.addEventListener('change', renderPreview);
+    });
+
+    renderPreview();
   }
 
   if (accessSearch && accessSuggestions && accessUserId && accessInventoryId) {

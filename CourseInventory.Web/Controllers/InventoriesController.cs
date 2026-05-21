@@ -170,28 +170,31 @@ public class InventoriesController(
     [Authorize, HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteMany([FromForm] int[] ids)
     {
-        if (ids.Length == 0)
+        var distinctIds = ids.Distinct().ToArray();
+        if (distinctIds.Length == 0)
         {
             TempData["Error"] = "No inventories selected.";
             return RedirectToAction(nameof(Index));
         }
 
         var user = (await users.GetUserAsync(User))!;
-        var deleted = 0;
-        foreach (var id in ids.Distinct())
-        {
-            var accessState = await access.GetAccessAsync(id, user);
-            if (!accessState.CanManage)
-            {
-                continue;
-            }
+        var scope = await access.BuildScopeAsync(user);
+        var manageableIds = await db.Inventories.AsNoTracking()
+            .Where(i => distinctIds.Contains(i.Id) && (scope.IsAdmin || i.OwnerId == user.Id))
+            .Select(i => i.Id)
+            .ToArrayAsync();
 
-            var result = await inventories.DeleteAsync(id, user);
-            if (result.Success) deleted++;
+        if (manageableIds.Length > 0)
+        {
+            var rows = await db.Inventories
+                .Where(i => manageableIds.Contains(i.Id))
+                .ToListAsync();
+            db.Inventories.RemoveRange(rows);
+            await db.SaveChangesAsync();
         }
 
-        TempData[deleted > 0 ? "Success" : "Error"] = deleted > 0
-            ? $"{deleted} inventory deleted."
+        TempData[manageableIds.Length > 0 ? "Success" : "Error"] = manageableIds.Length > 0
+            ? $"{manageableIds.Length} inventory deleted."
             : "No inventory could be deleted.";
         return RedirectToAction(nameof(Index));
     }

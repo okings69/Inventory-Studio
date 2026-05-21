@@ -303,14 +303,17 @@
         </section>
 
         <section class="tab-pane fade" id="customid">
-            <div class="panel details-panel">
+            <div class="panel details-panel"
+                 data-customid-builder
+                 data-inventory-id="@inventory.Id"
+                 data-reorder-url="@Url.Action("Reorder", "CustomId")">
                 <div class="panel-header">
                     <div><h2>@T["CustomId"]</h2><p>@T["DetailsCustomIdText"]</p></div>
-                    <code id="customIdPreview" class="custom-id-preview">@Model.CustomIdPreview</code>
+                    <code id="customIdPreview" class="custom-id-preview" data-customid-preview>@Model.CustomIdPreview</code>
                 </div>
                 @if (Model.Access.CanManage)
                 {
-                    <form asp-controller="CustomId" asp-action="Add" method="post" class="details-form">
+                    <form asp-controller="CustomId" asp-action="Add" method="post" class="details-form" data-customid-add-form>
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="inventoryId" value="@inventory.Id" />
                         <div class="row g-2">
@@ -359,15 +362,30 @@
                         <div class="form-text mt-2">@T["CustomIdFormatHint"]</div>
                     </form>
                 }
-                <div class="builder-list">
+                <div class="builder-list" data-customid-list>
                     @if (!inventory.CustomIdElements.Any())
                     {
                         <div class="empty-state">@T["CustomIdPreview"]</div>
                     }
                     @foreach (var element in inventory.CustomIdElements.OrderBy(e => e.SortOrder))
                     {
-                        <article class="builder-row">
-                            <div><strong>@element.ElementType</strong><span>@element.FixedValue @element.Format</span></div>
+                        <article class="builder-row"
+                                 data-customid-row
+                                 data-id="@element.Id"
+                                 data-type="@element.ElementType"
+                                 data-fixed="@element.FixedValue"
+                                 data-format="@element.Format"
+                                 draggable="@(Model.Access.CanManage ? "true" : "false")">
+                            <div>
+                                @if (Model.Access.CanManage)
+                                {
+                                    <button class="btn btn-sm btn-outline-secondary me-2"
+                                            type="button"
+                                            data-customid-drag-handle
+                                            aria-label="Drag Custom ID element">Drag</button>
+                                }
+                                <strong>@element.ElementType</strong><span>@element.FixedValue @element.Format</span>
+                            </div>
                             @if (Model.Access.CanManage)
                             {
                                 <form asp-controller="CustomId" asp-action="Delete" method="post">

@@ -1,0 +1,173 @@
+﻿@model InventoryDetailsViewModel
+@inject IUiTextService T
+@using System.Security.Claims
+@{
+    var inventory = Model.Inventory;
+    var fields = inventory.Fields.OrderBy(f => f.SortOrder).ThenBy(f => f.Title).ToList();
+    var visibleFields = fields.Where(f => f.ShowInTable).ToList();
+    var essentialFieldOrder = new[] { "title", "author", "year", "status" };
+    var essentialFieldMap = visibleFields.Select(field => new { Field = field, NormalizedTitle = InventoryDetailsViewHelper.NormalizeFieldTitle(field.Title) }).Where(entry => essentialFieldOrder.Contains(entry.NormalizedTitle)).GroupBy(entry => entry.NormalizedTitle).ToDictionary(group => group.Key, group => group.First().Field);
+    var preferredTableFields = essentialFieldOrder.Where(key => essentialFieldMap.ContainsKey(key)).Select(key => essentialFieldMap[key]).ToList();
+    var tableFields = preferredTableFields.Count > 0 ? preferredTableFields : visibleFields.Take(4).ToList();
+    var items = inventory.Items.OrderByDescending(i => i.UpdatedAt).ToList();
+    var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var canLikeItems = User.Identity?.IsAuthenticated == true;
+    var canEditItems = Model.Access.CanWrite;
+    var canDeleteItems = Model.Access.CanManage;
+}
+        <section class="tab-pane fade show active" id="items">
+            <div class="panel details-panel">
+                @if (canLikeItems)
+                {
+                    @Html.AntiForgeryToken()
+                }
+                <div class="panel-header">
+                    <div>
+                        <h2>@T["Items"]</h2>
+                        <p>@string.Format(T["ItemsVisibleColumns"], items.Count, tableFields.Count)</p>
+                    </div>
+                    @if (canEditItems)
+                    {
+                        <a class="btn btn-sm btn-primary" asp-controller="Items" asp-action="Create" asp-route-inventoryId="@inventory.Id">@T["AddItem"]</a>
+                    }
+                </div>
+                @if (canEditItems)
+                {
+                    <form asp-controller="Items" asp-action="DeleteSelected" method="post" data-items-toolbar hidden>
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="inventoryId" value="@inventory.Id" />
+                        <div class="inventory-bulk-toolbar m-0">
+                            <div class="bulk-toolbar-meta">
+                                <strong data-items-selected-count data-selected-template="@T["ItemSelectedCount"]">@string.Format(T["ItemSelectedCount"], 0)</strong>
+                                <span>@T["BulkEditHint"]</span>
+                            </div>
+                            <button class="btn btn-outline-primary btn-sm" type="button" data-items-edit disabled>@T["Edit"]</button>
+                            @if (canDeleteItems)
+                            {
+                                <button class="btn btn-outline-danger btn-sm" type="submit">@T["DeleteSelected"]</button>
+                            }
+                            <button class="btn btn-outline-secondary btn-sm" type="button" data-items-clear>@T["ClearSelection"]</button>
+                        </div>
+                        <div data-items-hidden-inputs></div>
+                    </form>
+                }
+                <div class="table-responsive">
+                    <table class="table app-table table-hover align-middle details-items-table" data-details-items-table>
+                        <thead>
+                            <tr>
+                                @if (canEditItems)
+                                {
+                                    <th class="check-col">
+                                        <input class="form-check-input" type="checkbox" data-items-select-all aria-label="@T["SelectRows"]" />
+                                    </th>
+                                }
+                                <th>@T["CustomId"]</th>
+                                @foreach (var field in tableFields)
+                                {
+                                    <th>
+                                        <span class="field-label-with-help">
+                                            <span>@field.Title</span>
+                                            @if (!string.IsNullOrWhiteSpace(field.Description))
+                                            {
+                                                <button class="field-help-trigger"
+                                                        type="button"
+                                                        data-bs-toggle="tooltip"
+                                                        data-bs-placement="top"
+                                                        title="@field.Description"
+                                                        aria-label="@field.Description">?</button>
+                                            }
+                                        </span>
+                                    </th>
+                                }
+                                <th class="text-end">@T["Likes"]</th>
+                                <th>@T["Updated"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (items.Any())
+                            {
+                                @foreach (var item in items)
+                                {
+                                    var itemDetailsUrl = Url.Action("Details", "Items", new { item.Id });
+                                    var itemEditUrl = canEditItems ? Url.Action("Edit", "Items", new { item.Id }) : null;
+                                    <tr data-id="@item.Id" tabindex="0" aria-label="@($"{T["Details"]} {item.CustomId}")" data-href="@itemDetailsUrl" data-edit-href="@itemEditUrl">
+                                        @if (canEditItems)
+                                        {
+                                            <td class="check-col" data-no-row-click>
+                                                <input class="form-check-input" type="checkbox" data-item-select value="@item.Id" />
+                                            </td>
+                                        }
+                                        <td>
+                                            <div class="table-title">@item.CustomId</div>
+                                            <div class="table-subtitle">#@item.Id</div>
+                                        </td>
+                                        @foreach (var field in tableFields)
+                                        {
+                                            var value = InventoryDetailsViewHelper.GetFieldValue(item, field.FieldKey);
+                                            var statusClass = InventoryDetailsViewHelper.GetStatusBadgeClass(field, value);
+
+                                            <td>
+                                                @if (!string.IsNullOrWhiteSpace(statusClass))
+                                                {
+                                                    <span class="badge item-status-badge @statusClass">@InventoryDetailsViewHelper.FormatFieldValue(value)</span>
+                                                }
+                                                else
+                                                {
+                                                    @InventoryDetailsViewHelper.FormatFieldValue(value)
+                                                }
+                                            </td>
+                                        }
+                                        <td class="text-end">
+                                            @{
+                                                var isLikedByCurrentUser = canLikeItems && item.Likes.Any(l => l.UserId == currentUserId);
+                                            }
+                                            @if (canLikeItems)
+                                            {
+                                                <button
+                                                    class="likes-pill likes-pill-button @(isLikedByCurrentUser ? "is-liked" : string.Empty)"
+                                                    type="button"
+                                                    title="@T["LikeUnlike"]"
+                                                    data-no-row-click
+                                                    data-item-like
+                                                    data-item-id="@item.Id"
+                                                    data-inventory-id="@inventory.Id"
+                                                    aria-pressed="@(isLikedByCurrentUser.ToString().ToLowerInvariant())">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                        <path d="M12 21.35 10.55 20C5.4 15.24 2 12.09 2 8.25 2 5.42 4.42 3 7.25 3c1.6 0 3.14.74 4.15 1.91A5.53 5.53 0 0 1 15.55 3C18.38 3 20.8 5.42 20.8 8.25c0 3.84-3.4 6.99-8.55 11.76L12 21.35Z" fill="currentColor" />
+                                                    </svg>
+                                                    <span data-item-like-count>@item.Likes.Count</span>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <span class="likes-pill" title="@($"{item.Likes.Count} {T["Likes"]}")">
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                        <path d="M12 21.35 10.55 20C5.4 15.24 2 12.09 2 8.25 2 5.42 4.42 3 7.25 3c1.6 0 3.14.74 4.15 1.91A5.53 5.53 0 0 1 15.55 3C18.38 3 20.8 5.42 20.8 8.25c0 3.84-3.4 6.99-8.55 11.76L12 21.35Z" fill="currentColor" />
+                                                    </svg>
+                                                    <span>@item.Likes.Count</span>
+                                                </span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="details-updated">@item.UpdatedAt.ToLocalTime().ToString("g")</div>
+                                            <div class="table-subtitle">@T["Details"]</div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="@(tableFields.Count + (canEditItems ? 4 : 3))">
+                                        <div class="empty-state empty-state-table">
+                                            <strong>@T["NoItemsFound"]</strong>
+                                            <span>@T["StartWithFirstItem"]</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>

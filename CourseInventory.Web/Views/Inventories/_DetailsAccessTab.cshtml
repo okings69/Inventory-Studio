@@ -1,0 +1,46 @@
+﻿@model InventoryDetailsViewModel
+@inject IUiTextService T
+@{ var inventory = Model.Inventory; }
+        <section class="tab-pane fade" id="access">
+            <div class="panel details-panel">
+                <div class="panel-header">
+                    <div><h2>@T["Access"]</h2><p>@T["DetailsAccessText"]</p></div>
+                    <span class="access-badge @(inventory.IsPublic ? "is-public" : "is-private")">@(inventory.IsPublic ? T["Public"] : T["Private"])</span>
+                </div>
+                @if (Model.Access.CanManage)
+                {
+                    <form asp-controller="Access" asp-action="Grant" method="post" class="details-form access-grant-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="inventoryId" value="@inventory.Id" />
+                        <input type="hidden" value="@inventory.Id" data-access-inventory-id />
+                        <input type="hidden" name="userId" data-access-user-id />
+                        <div class="access-autocomplete">
+                            <input class="form-control" data-access-search placeholder="@T["UserIdAutocomplete"]" autocomplete="off" />
+                            <div class="tag-suggestions" data-access-suggestions hidden></div>
+                        </div>
+                        <button class="btn btn-outline-primary">@T["Grant"]</button>
+                    </form>
+                }
+                <div class="builder-list">
+                    @if (!inventory.Accesses.Any())
+                    {
+                        <div class="empty-state">@T["NoSharedUsers"]</div>
+                    }
+                    @foreach (var row in inventory.Accesses.OrderBy(a => a.User!.UserName))
+                    {
+                        <article class="builder-row">
+                            <div><strong>@row.User?.UserName</strong><span>@row.User?.Email</span></div>
+                            @if (Model.Access.CanManage)
+                            {
+                                <form asp-controller="Access" asp-action="Revoke" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="inventoryId" value="@inventory.Id" />
+                                    <input type="hidden" name="userId" value="@row.UserId" />
+                                    <button class="btn btn-sm btn-outline-danger">@T["Remove"]</button>
+                                </form>
+                            }
+                        </article>
+                    }
+                </div>
+            </div>
+        </section>

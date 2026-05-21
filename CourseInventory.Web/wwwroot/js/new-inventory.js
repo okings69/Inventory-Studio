@@ -5,7 +5,6 @@
   const titleInput = form.querySelector('#Title');
   const categoryInput = form.querySelector('#Category');
   const imageInput = form.querySelector('#ImageUrl');
-  const imagePreview = document.getElementById('imagePreview');
   const markdownInput = document.getElementById('DescriptionMarkdown');
   const markdownPreview = document.getElementById('markdownPreview');
   const hiddenTags = form.querySelector('[data-tags-hidden]');
@@ -48,7 +47,6 @@
     const url = imageInput.value.trim();
     imageInput.setCustomValidity('');
     if (!url) {
-      imagePreview.textContent = imagePreview.dataset.emptyText || 'No image URL';
       validateForm();
       return;
     }
@@ -57,22 +55,11 @@
       new URL(url);
     } catch {
       imageInput.setCustomValidity('Invalid image URL');
-      imagePreview.textContent = imagePreview.dataset.invalidText || 'Invalid image URL';
       validateForm();
       return;
     }
 
-    imagePreview.innerHTML = '';
-    const img = document.createElement('img');
-    img.alt = 'Inventory preview';
-    img.src = url;
-    img.onload = validateForm;
-    img.onerror = () => {
-      imageInput.setCustomValidity('Invalid image URL');
-      imagePreview.textContent = imagePreview.dataset.invalidText || 'Invalid image URL';
-      validateForm();
-    };
-    imagePreview.appendChild(img);
+    validateForm();
   };
 
   const syncTags = () => {

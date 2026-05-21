@@ -1,0 +1,49 @@
+﻿@model InventoryDetailsViewModel
+@inject IUiTextService T
+@{
+    var inventory = Model.Inventory;
+    var tags = string.Join(", ", inventory.InventoryTags.Select(t => t.Tag!.Name));
+}
+        <section class="tab-pane fade" id="settings">
+            <div class="panel details-panel">
+                <div class="panel-header">
+                    <div><h2>@T["Settings"]</h2><p>@T["DetailsSettingsText"]</p></div>
+                    <span id="autosaveStatus" class="autosave-pill">@T["AllChangesSaved"]</span>
+                </div>
+                @if (Model.Access.CanManage)
+                {
+                    <form asp-action="SaveSettings" method="post" id="settingsForm" class="details-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="Id" value="@inventory.Id" />
+                        <input type="hidden" name="RowVersion" value="@inventory.RowVersion" />
+                        <div class="row g-3">
+                            <div class="col-md-8"><label class="form-label">@T["Title"]</label><input class="form-control" name="Title" value="@inventory.Title" required /></div>
+                            <div class="col-md-4"><label class="form-label">@T["Category"]</label><input class="form-control" name="Category" value="@inventory.Category" required /></div>
+                            <div class="col-12"><label class="form-label">@T["DescriptionMarkdown"]</label><textarea class="form-control" name="DescriptionMarkdown" rows="5">@inventory.DescriptionMarkdown</textarea></div>
+                            <div class="col-md-8"><label class="form-label">@T["ImageUrl"]</label><input class="form-control" name="ImageUrl" value="@inventory.ImageUrl" /></div>
+                            <div class="col-md-4">
+                                <label class="form-label">@T["Tags"]</label>
+                                <input type="hidden" name="Tags" value="@tags" data-settings-tags-hidden />
+                                <div class="tag-input-shell" data-settings-tags-editor>
+                                    <div class="tag-badges" data-settings-tag-badges></div>
+                                    <input class="tag-entry-input" type="text" data-settings-tag-input autocomplete="off" placeholder="@T["AddTagPlaceholder"]" />
+                                    <div class="tag-suggestions" data-settings-tag-suggestions hidden></div>
+                                </div>
+                                <noscript><input class="form-control mt-2" name="Tags" value="@tags" /></noscript>
+                            </div>
+                            <div class="col-12"><label class="form-label">@T["StatusDropdownOptions"]</label><input class="form-control" name="StatusOptions" value="@inventory.StatusOptions" /><div class="form-text">@T["StatusDropdownOptionsHelp"]</div></div>
+                            <div class="col-12">
+                                <div class="switch-row">
+                                    <div><strong>@T["PublicWriteAccess"]</strong><div class="text-body-secondary small">@T["PublicWriteAccessHelp"]</div></div>
+                                    <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" name="IsPublic" value="true" checked="@inventory.IsPublic" /></div>
+                                </div>
+                            </div>
+                            <div class="col-12"><button class="btn btn-primary">@T["Save"]</button></div>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <p class="text-body-secondary p-3 mb-0">@T["ReadOnly"]</p>
+                }
+            </div>

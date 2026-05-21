@@ -1,0 +1,27 @@
+﻿@model InventoryDetailsViewModel
+@inject IMarkdownService Markdown
+@inject IUiTextService T
+@{
+    var inventory = Model.Inventory;
+    var canEditItems = Model.Access.CanWrite;
+    var descriptionMarkdown = InventoryDetailsViewHelper.TrimDuplicateHeading(inventory.Title, inventory.DescriptionMarkdown);
+}
+    <div class="details-hero mb-4">
+        <div class="details-hero-main">
+            <p class="eyebrow mb-2">@inventory.Category</p>
+            <h1>@inventory.Title</h1>
+            <div class="details-meta">
+                <span>@T["By"] @inventory.Owner?.UserName</span>
+                <span>@inventory.UpdatedAt.ToLocalTime().ToString("g")</span>
+                <span class="access-badge @(inventory.IsPublic ? "is-public" : "is-private")">@(inventory.IsPublic ? T["Public"] : T["Private"])</span>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(descriptionMarkdown))
+            {
+                <div class="markdown details-description">@Html.Raw(Markdown.ToHtml(descriptionMarkdown))</div>
+            }
+        </div>
+        @if (canEditItems)
+        {
+            <a class="btn btn-primary glow-button" asp-controller="Items" asp-action="Create" asp-route-inventoryId="@inventory.Id">@T["AddItem"]</a>
+        }
+    </div>

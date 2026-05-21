@@ -1,0 +1,80 @@
+﻿@model InventoryDetailsViewModel
+@inject IUiTextService T
+@{
+    var inventory = Model.Inventory;
+    var fields = inventory.Fields.OrderBy(f => f.SortOrder).ThenBy(f => f.Title).ToList();
+}
+        <section class="tab-pane fade" id="fields">
+            <div class="panel details-panel">
+                <div class="panel-header">
+                    <div><h2>@T["Fields"]</h2><p>@T["DetailsFieldsText"]</p></div>
+                </div>
+                @if (Model.Access.CanManage)
+                {
+                    <form asp-controller="Fields" asp-action="Add" method="post" class="details-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="inventoryId" value="@inventory.Id" />
+                        <div class="row g-2">
+                            <div class="col-md-3"><select class="form-select" name="fieldType" asp-items="Html.GetEnumSelectList<InventoryFieldType>()"></select></div>
+                            <div class="col-md-4"><input class="form-control" name="title" placeholder="@T["FieldTitle"]" required /></div>
+                            <div class="col-md-3"><input class="form-control" name="description" placeholder="@T["Description"]" /></div>
+                            <div class="col-md-2"><button class="btn btn-outline-primary w-100">@T["AddField"]</button></div>
+                        </div>
+                    </form>
+                }
+                <div class="field-grid">
+                    @if (!fields.Any())
+                    {
+                        <div class="empty-state">@T["NoFieldsConfigured"]</div>
+                    }
+                    @foreach (var field in fields)
+                    {
+                        <article class="field-card">
+                            <form asp-controller="Fields" asp-action="Update" method="post" class="field-update-form">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="Id" value="@field.Id" />
+                                <input type="hidden" name="InventoryId" value="@inventory.Id" />
+                                <input type="hidden" name="FieldType" value="@field.FieldType" />
+                                <input type="hidden" name="FieldKey" value="@field.FieldKey" />
+                                <div class="field-card-header">
+                                    <div>
+                                        <strong>@field.Title</strong>
+                                        <span>@field.FieldType / @field.FieldKey</span>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-primary" type="submit">@T["Save"]</button>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label">@T["FieldTitle"]</label>
+                                        <input class="form-control" name="Title" value="@field.Title" required />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">@T["Description"]</label>
+                                        <input class="form-control" name="Description" value="@field.Description" />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">@T["ShowInTable"]</label>
+                                        <input type="hidden" name="ShowInTable" value="false" />
+                                        <div class="form-check form-switch field-switch-row">
+                                            <input class="form-check-input" type="checkbox" name="ShowInTable" value="true" checked="@field.ShowInTable" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">@T["SortOrder"]</label>
+                                        <input class="form-control" type="number" name="SortOrder" value="@field.SortOrder" />
+                                    </div>
+                                </div>
+                            </form>
+                            @if (Model.Access.CanManage)
+                            {
+                                <form asp-controller="Fields" asp-action="Delete" method="post" class="field-delete-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@field.Id" />
+                                    <input type="hidden" name="inventoryId" value="@inventory.Id" />
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">@T["Delete"]</button>
+                                </form>
+                            }
+                        </article>
+                    }
+                </div>
+            </div>

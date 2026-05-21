@@ -1,0 +1,38 @@
+﻿@model InventoryDetailsViewModel
+@inject IUiTextService T
+@inject IDiscussionPresenceService Presence
+@{
+    var inventory = Model.Inventory;
+    var canChat = User.Identity?.IsAuthenticated == true && Model.Access.CanRead;
+    var onlineUserIds = Presence.GetOnlineUserIds(inventory.Id).ToHashSet();
+}
+        <section class="tab-pane fade" id="chat" data-inventory-id="@inventory.Id">
+            <div class="panel details-panel">
+                <div class="panel-header">
+                    <div><h2>@T["Chat"]</h2><p>@T["DetailsChatText"]</p></div>
+                </div>
+                <div id="chatMessages" class="chat-box details-chat">
+                    @foreach (var message in inventory.Messages.OrderBy(m => m.CreatedAt))
+                    {
+                        var isAuthorOnline = !string.IsNullOrWhiteSpace(message.AuthorId) && onlineUserIds.Contains(message.AuthorId);
+                        <article class="chat-message">
+                            <div class="chat-avatar @(isAuthorOnline ? "is-online" : string.Empty)" data-chat-author-id="@message.AuthorId">@((message.Author?.UserName ?? "U").Substring(0, 1).ToUpperInvariant())</div>
+                            <div class="chat-bubble">
+                                <div class="chat-meta">@message.Author?.UserName <span>@message.CreatedAt.ToLocalTime().ToString("g")</span></div>
+                                <div class="markdown">@Html.Raw(message.BodyHtml)</div>
+                            </div>
+                        </article>
+                    }
+                </div>
+                @if (canChat)
+                {
+                    <form asp-controller="Discussion" asp-action="Add" method="post" id="chatForm" class="chat-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="inventoryId" value="@inventory.Id" />
+                        <textarea class="form-control" name="body" rows="3" placeholder="@T["MarkdownMessage"]"></textarea>
+                        <button class="btn btn-primary">@T["Send"]</button>
+                    </form>
+                }
+            </div>
+        </section>
+

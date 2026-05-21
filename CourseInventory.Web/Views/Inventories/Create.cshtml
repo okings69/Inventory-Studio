@@ -22,7 +22,7 @@
             <div class="row g-3">
                 <div class="col-md-8">
                     <label class="form-label" asp-for="Title">@T["Title"]</label>
-                    <input class="form-control form-control-lg" asp-for="Title" required placeholder="Warehouse laptops 2026" />
+                    <input class="form-control form-control-lg" asp-for="Title" required placeholder="Enter inventory title" />
                     <span class="invalid-feedback">@T["TitleRequired"]</span>
                     <span class="text-danger" asp-validation-for="Title"></span>
                 </div>
@@ -46,21 +46,17 @@
                         <span class="form-hint">@T["LivePreview"]</span>
                     </div>
                     <div class="markdown-editor">
-                        <textarea class="form-control" asp-for="DescriptionMarkdown" rows="8" placeholder="Describe scope, ownership, audit notes or intake rules."></textarea>
+                        <textarea class="form-control" asp-for="DescriptionMarkdown" rows="8" placeholder="Optional description, ownership notes, audit rules..."></textarea>
                         <div class="markdown-preview markdown" id="markdownPreview">@T["PreviewAppearsAsYouType"]</div>
                     </div>
                     <span class="text-danger" asp-validation-for="DescriptionMarkdown"></span>
                 </div>
 
-                <div class="col-md-7">
+                <div class="col-12">
                     <label class="form-label" asp-for="ImageUrl">@T["ImageUrl"]</label>
-                    <input class="form-control" asp-for="ImageUrl" type="url" placeholder="https://example.com/inventory-cover.jpg" />
+                    <input class="form-control" asp-for="ImageUrl" type="url" placeholder="Optional image URL" />
                     <span class="invalid-feedback">@T["InvalidImageUrl"]</span>
                     <span class="text-danger" asp-validation-for="ImageUrl"></span>
-                </div>
-                <div class="col-md-5">
-                    <label class="form-label">@T["ImagePreview"]</label>
-                    <div class="image-preview" id="imagePreview" data-empty-text="@T["NoImageUrl"]" data-invalid-text="@T["InvalidImageUrl"]">@T["NoImageUrl"]</div>
                 </div>
 
                 <div class="col-12">

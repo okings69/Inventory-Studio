@@ -1,0 +1,10 @@
+﻿@model InventoryDetailsViewModel
+@inject IUiTextService T
+@{ var inventory = Model.Inventory; }
+        <section class="tab-pane fade" id="export">
+            <div class="panel details-panel">
+                <div class="panel-header"><div><h2>@T["Export"]</h2><p>@T["DetailsExportText"]</p></div></div>
+                <div class="p-3"><a class="btn btn-outline-primary" asp-controller="Export" asp-action="Csv" asp-route-inventoryId="@inventory.Id">@T["ExportCsv"]</a></div>
+            </div>
+        </section>
+    </div>

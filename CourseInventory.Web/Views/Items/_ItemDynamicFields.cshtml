@@ -1,0 +1,120 @@
+﻿@model ItemFormViewModel
+@inject IUiTextService T
+@{
+    var currentYear = DateTime.UtcNow.Year;
+    var statusOptions = ItemEditViewHelper.ParseStatusOptions(Model.Inventory.StatusOptions);
+    var yearRangeMessage = string.Format(T["YearRequiredRange"], currentYear);
+    var orderedFields = Model.Fields.OrderBy(f => f.SortOrder).ThenBy(f => f.Title).ToList();
+}
+                @foreach (var f in orderedFields)
+                {
+                    var normalizedTitle = ItemEditViewHelper.NormalizeTitle(f.Title);
+                    var isModel = normalizedTitle == "model";
+                    var isStatus = normalizedTitle == "status";
+                    var isYear = normalizedTitle == "year";
+                    var isSerial = normalizedTitle == "serialnumber";
+                    var isBooleanField = f.FieldKey.StartsWith("Bool", StringComparison.Ordinal);
+                    var fieldInputId = $"field-{f.Id}";
+                    var required = isModel || isSerial || isYear;
+
+                    <div class="col-md-6">
+                        <label class="form-label" for="@(isBooleanField ? fieldInputId : null)">
+                            <span class="field-label-with-help">
+                                <span>@f.Title</span>
+                                @if (!string.IsNullOrWhiteSpace(f.Description))
+                                {
+                                    <button class="field-help-trigger"
+                                            type="button"
+                                            data-bs-toggle="tooltip"
+                                            data-bs-placement="top"
+                                            title="@f.Description"
+                                            aria-label="@f.Description">?</button>
+                                }
+                            </span>
+                        </label>
+                        @switch (f.FieldKey)
+                        {
+                            case "Text1":
+                                if (isStatus) { <select class="form-select" asp-for="Item.Text1" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
+                                else { <input class="form-control" asp-for="Item.Text1" required="@required" /> }
+                                break;
+                            case "Text2":
+                                if (isStatus) { <select class="form-select" asp-for="Item.Text2" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
+                                else { <input class="form-control" asp-for="Item.Text2" required="@required" /> }
+                                break;
+                            case "Text3":
+                                if (isStatus) { <select class="form-select" asp-for="Item.Text3" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
+                                else { <input class="form-control" asp-for="Item.Text3" required="@required" /> }
+                                break;
+                            case "LongText1":
+                                if (isStatus) { <select class="form-select" asp-for="Item.LongText1" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
+                                else { <textarea class="form-control" asp-for="Item.LongText1" required="@required"></textarea> }
+                                break;
+                            case "LongText2":
+                                if (isStatus) { <select class="form-select" asp-for="Item.LongText2" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
+                                else { <textarea class="form-control" asp-for="Item.LongText2" required="@required"></textarea> }
+                                break;
+                            case "LongText3":
+                                if (isStatus) { <select class="form-select" asp-for="Item.LongText3" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
+                                else { <textarea class="form-control" asp-for="Item.LongText3" required="@required"></textarea> }
+                                break;
+                            case "Number1": <input class="form-control" asp-for="Item.Number1" type="number" min="@(isYear ? 2000 : null)" max="@(isYear ? currentYear : null)" required="@required" />; break;
+                            case "Number2": <input class="form-control" asp-for="Item.Number2" type="number" min="@(isYear ? 2000 : null)" max="@(isYear ? currentYear : null)" required="@required" />; break;
+                            case "Number3": <input class="form-control" asp-for="Item.Number3" type="number" min="@(isYear ? 2000 : null)" max="@(isYear ? currentYear : null)" required="@required" />; break;
+                            case "Link1":
+                                if (isStatus) { <select class="form-select" asp-for="Item.Link1" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
+                                else { <input class="form-control" asp-for="Item.Link1" type="url" required="@required" /> }
+                                break;
+                            case "Link2":
+                                if (isStatus) { <select class="form-select" asp-for="Item.Link2" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
+                                else { <input class="form-control" asp-for="Item.Link2" type="url" required="@required" /> }
+                                break;
+                            case "Link3":
+                                if (isStatus) { <select class="form-select" asp-for="Item.Link3" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
+                                else { <input class="form-control" asp-for="Item.Link3" type="url" required="@required" /> }
+                                break;
+                            case "Bool1":
+                                <div class="form-check form-switch item-bool-switch">
+                                    <input class="form-check-input" type="checkbox" id="@fieldInputId" name="Item.Bool1" value="true" checked="@(Model.Item.Bool1 == true)" role="switch" />
+                                </div>
+                                <input type="hidden" name="Item.Bool1" value="false" />
+                                break;
+                            case "Bool2":
+                                <div class="form-check form-switch item-bool-switch">
+                                    <input class="form-check-input" type="checkbox" id="@fieldInputId" name="Item.Bool2" value="true" checked="@(Model.Item.Bool2 == true)" role="switch" />
+                                </div>
+                                <input type="hidden" name="Item.Bool2" value="false" />
+                                break;
+                            case "Bool3":
+                                <div class="form-check form-switch item-bool-switch">
+                                    <input class="form-check-input" type="checkbox" id="@fieldInputId" name="Item.Bool3" value="true" checked="@(Model.Item.Bool3 == true)" role="switch" />
+                                </div>
+                                <input type="hidden" name="Item.Bool3" value="false" />
+                                break;
+                        }
+                        @if (isStatus)
+                        {
+                            <div class="invalid-feedback">@T["StatusRequired"]</div>
+                        }
+                        else if (isModel)
+                        {
+                            <div class="invalid-feedback">@T["ModelRequired"]</div>
+                        }
+                        else if (isSerial)
+                        {
+                            <div class="invalid-feedback">@T["SerialRequiredUnique"]</div>
+                        }
+                        else if (isYear)
+                        {
+                            <div class="invalid-feedback">@yearRangeMessage</div>
+                        }
+                        @ItemEditViewHelper.RenderFieldValidation(f.FieldKey)
+                        @if (!string.IsNullOrWhiteSpace(f.Description))
+                        {
+                            <noscript>
+                                <div class="form-text">@f.Description</div>
+                            </noscript>
+                        }
+                    </div>
+                }
+

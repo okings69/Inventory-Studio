@@ -1,13 +1,8 @@
 @model ItemFormViewModel
-@using Microsoft.AspNetCore.Html
 @inject IUiTextService T
 @{
     var isNew = Model.Item.Id == 0;
-    var currentYear = DateTime.UtcNow.Year;
     ViewData["Title"] = isNew ? T["NewItem"] : Model.Item.CustomId;
-    var statusOptions = ParseStatusOptions(Model.Inventory.StatusOptions);
-    var yearRangeMessage = string.Format(T["YearRequiredRange"], currentYear);
-    var orderedFields = Model.Fields.OrderBy(f => f.SortOrder).ThenBy(f => f.Title).ToList();
 }
 
 <section class="item-form-shell">
@@ -43,117 +38,7 @@
                     <span class="text-danger" asp-validation-for="Item.CustomId"></span>
                 </div>
 
-                @foreach (var f in orderedFields)
-                {
-                    var normalizedTitle = NormalizeTitle(f.Title);
-                    var isModel = normalizedTitle == "model";
-                    var isStatus = normalizedTitle == "status";
-                    var isYear = normalizedTitle == "year";
-                    var isSerial = normalizedTitle == "serialnumber";
-                    var isBooleanField = f.FieldKey.StartsWith("Bool", StringComparison.Ordinal);
-                    var fieldInputId = $"field-{f.Id}";
-                    var required = isModel || isSerial || isYear;
-
-                    <div class="col-md-6">
-                        <label class="form-label" for="@(isBooleanField ? fieldInputId : null)">
-                            <span class="field-label-with-help">
-                                <span>@f.Title</span>
-                                @if (!string.IsNullOrWhiteSpace(f.Description))
-                                {
-                                    <button class="field-help-trigger"
-                                            type="button"
-                                            data-bs-toggle="tooltip"
-                                            data-bs-placement="top"
-                                            title="@f.Description"
-                                            aria-label="@f.Description">?</button>
-                                }
-                            </span>
-                        </label>
-                        @switch (f.FieldKey)
-                        {
-                            case "Text1":
-                                if (isStatus) { <select class="form-select" asp-for="Item.Text1" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
-                                else { <input class="form-control" asp-for="Item.Text1" required="@required" /> }
-                                break;
-                            case "Text2":
-                                if (isStatus) { <select class="form-select" asp-for="Item.Text2" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
-                                else { <input class="form-control" asp-for="Item.Text2" required="@required" /> }
-                                break;
-                            case "Text3":
-                                if (isStatus) { <select class="form-select" asp-for="Item.Text3" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
-                                else { <input class="form-control" asp-for="Item.Text3" required="@required" /> }
-                                break;
-                            case "LongText1":
-                                if (isStatus) { <select class="form-select" asp-for="Item.LongText1" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
-                                else { <textarea class="form-control" asp-for="Item.LongText1" required="@required"></textarea> }
-                                break;
-                            case "LongText2":
-                                if (isStatus) { <select class="form-select" asp-for="Item.LongText2" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
-                                else { <textarea class="form-control" asp-for="Item.LongText2" required="@required"></textarea> }
-                                break;
-                            case "LongText3":
-                                if (isStatus) { <select class="form-select" asp-for="Item.LongText3" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
-                                else { <textarea class="form-control" asp-for="Item.LongText3" required="@required"></textarea> }
-                                break;
-                            case "Number1": <input class="form-control" asp-for="Item.Number1" type="number" min="@(isYear ? 2000 : null)" max="@(isYear ? currentYear : null)" required="@required" />; break;
-                            case "Number2": <input class="form-control" asp-for="Item.Number2" type="number" min="@(isYear ? 2000 : null)" max="@(isYear ? currentYear : null)" required="@required" />; break;
-                            case "Number3": <input class="form-control" asp-for="Item.Number3" type="number" min="@(isYear ? 2000 : null)" max="@(isYear ? currentYear : null)" required="@required" />; break;
-                            case "Link1":
-                                if (isStatus) { <select class="form-select" asp-for="Item.Link1" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
-                                else { <input class="form-control" asp-for="Item.Link1" type="url" required="@required" /> }
-                                break;
-                            case "Link2":
-                                if (isStatus) { <select class="form-select" asp-for="Item.Link2" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
-                                else { <input class="form-control" asp-for="Item.Link2" type="url" required="@required" /> }
-                                break;
-                            case "Link3":
-                                if (isStatus) { <select class="form-select" asp-for="Item.Link3" required><option value="">@T["ChooseStatus"]</option>@foreach (var option in statusOptions) { <option value="@option">@option</option> }</select> }
-                                else { <input class="form-control" asp-for="Item.Link3" type="url" required="@required" /> }
-                                break;
-                            case "Bool1":
-                                <div class="form-check form-switch item-bool-switch">
-                                    <input class="form-check-input" type="checkbox" id="@fieldInputId" name="Item.Bool1" value="true" checked="@(Model.Item.Bool1 == true)" role="switch" />
-                                </div>
-                                <input type="hidden" name="Item.Bool1" value="false" />
-                                break;
-                            case "Bool2":
-                                <div class="form-check form-switch item-bool-switch">
-                                    <input class="form-check-input" type="checkbox" id="@fieldInputId" name="Item.Bool2" value="true" checked="@(Model.Item.Bool2 == true)" role="switch" />
-                                </div>
-                                <input type="hidden" name="Item.Bool2" value="false" />
-                                break;
-                            case "Bool3":
-                                <div class="form-check form-switch item-bool-switch">
-                                    <input class="form-check-input" type="checkbox" id="@fieldInputId" name="Item.Bool3" value="true" checked="@(Model.Item.Bool3 == true)" role="switch" />
-                                </div>
-                                <input type="hidden" name="Item.Bool3" value="false" />
-                                break;
-                        }
-                        @if (isStatus)
-                        {
-                            <div class="invalid-feedback">@T["StatusRequired"]</div>
-                        }
-                        else if (isModel)
-                        {
-                            <div class="invalid-feedback">@T["ModelRequired"]</div>
-                        }
-                        else if (isSerial)
-                        {
-                            <div class="invalid-feedback">@T["SerialRequiredUnique"]</div>
-                        }
-                        else if (isYear)
-                        {
-                            <div class="invalid-feedback">@yearRangeMessage</div>
-                        }
-                        @RenderFieldValidation(f.FieldKey)
-                        @if (!string.IsNullOrWhiteSpace(f.Description))
-                        {
-                            <noscript>
-                                <div class="form-text">@f.Description</div>
-                            </noscript>
-                        }
-                    </div>
-                }
+                <partial name="_ItemDynamicFields" model="Model" />
 
                 <div class="col-12 d-flex flex-wrap justify-content-end gap-2 pt-2">
                     <a class="btn btn-outline-secondary" asp-controller="Inventories" asp-action="Details" asp-route-id="@Model.Item.InventoryId">@T["Back"]</a>
@@ -192,35 +77,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/item-form.js" asp-append-version="true"></script>
-}
-
-@functions {
-    static string NormalizeTitle(string value) =>
-        new(value.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
-
-    static IReadOnlyList<string> ParseStatusOptions(string? statusOptions) =>
-        (string.IsNullOrWhiteSpace(statusOptions) ? Inventory.DefaultStatusOptions : statusOptions)
-            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-    static IHtmlContent RenderFieldValidation(string fieldKey) => fieldKey switch
-    {
-        "Text1" => new HtmlString("""<span class="text-danger field-validation-valid" data-valmsg-for="Item.Text1" data-valmsg-replace="true"></span>"""),
-        "Text2" => new HtmlString("""<span class="text-danger field-validation-valid" data-valmsg-for="Item.Text2" data-valmsg-replace="true"></span>"""),
-        "Text3" => new HtmlString("""<span class="text-danger field-validation-valid" data-valmsg-for="Item.Text3" data-valmsg-replace="true"></span>"""),
-        "LongText1" => new HtmlString("""<span class="text-danger field-validation-valid" data-valmsg-for="Item.LongText1" data-valmsg-replace="true"></span>"""),
-        "LongText2" => new HtmlString("""<span class="text-danger field-validation-valid" data-valmsg-for="Item.LongText2" data-valmsg-replace="true"></span>"""),
-        "LongText3" => new HtmlString("""<span class="text-danger field-validation-valid" data-valmsg-for="Item.LongText3" data-valmsg-replace="true"></span>"""),
-        "Number1" => new HtmlString("""<span class="text-danger field-validation-valid" data-valmsg-for="Item.Number1" data-valmsg-replace="true"></span>"""),
-        "Number2" => new HtmlString("""<span class="text-danger field-validation-valid" data-valmsg-for="Item.Number2" data-valmsg-replace="true"></span>"""),
-        "Number3" => new HtmlString("""<span class="text-danger field-validation-valid" data-valmsg-for="Item.Number3" data-valmsg-replace="true"></span>"""),
-        "Link1" => new HtmlString("""<span class="text-danger field-validation-valid" data-valmsg-for="Item.Link1" data-valmsg-replace="true"></span>"""),
-        "Link2" => new HtmlString("""<span class="text-danger field-validation-valid" data-valmsg-for="Item.Link2" data-valmsg-replace="true"></span>"""),
-        "Link3" => new HtmlString("""<span class="text-danger field-validation-valid" data-valmsg-for="Item.Link3" data-valmsg-replace="true"></span>"""),
-        "Bool1" => new HtmlString("""<span class="text-danger field-validation-valid" data-valmsg-for="Item.Bool1" data-valmsg-replace="true"></span>"""),
-        "Bool2" => new HtmlString("""<span class="text-danger field-validation-valid" data-valmsg-for="Item.Bool2" data-valmsg-replace="true"></span>"""),
-        "Bool3" => new HtmlString("""<span class="text-danger field-validation-valid" data-valmsg-for="Item.Bool3" data-valmsg-replace="true"></span>"""),
-        _ => HtmlString.Empty
-    };
 }

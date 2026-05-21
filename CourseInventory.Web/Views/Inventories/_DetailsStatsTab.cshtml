@@ -1,0 +1,65 @@
+﻿@model InventoryDetailsViewModel
+@inject IUiTextService T
+        <section class="tab-pane fade" id="stats">
+            <div class="panel details-panel">
+                <div class="panel-header"><div><h2>@T["Stats"]</h2><p>@T["DetailsStatsText"]</p></div></div>
+                <div class="stats-strip details-stats">
+                    <article class="metric stat-card"><span>@T["ItemsCount"]</span><strong>@Model.Stats?.ItemCount</strong></article>
+                    <article class="metric stat-card"><span>@T["Likes"]</span><strong>@Model.Stats?.TotalLikes</strong></article>
+                </div>
+                <div class="row g-3 p-3">
+                    <div class="col-lg-6">
+                        <h3 class="h6">@T["NumericFields"]</h3>
+                        <table class="table app-table compact-table">
+                            <thead><tr><th>@T["Field"]</th><th>@T["Min"]</th><th>@T["Max"]</th><th>@T["Average"]</th></tr></thead>
+                            <tbody>
+                            @if (Model.Stats!.NumberStats.Any())
+                            {
+                                @foreach (var stat in Model.Stats!.NumberStats)
+                                {
+                                    <tr>
+                                        <td><span class="stats-field-label" title="@stat.Value.FieldKey">@stat.Value.Label</span></td>
+                                        <td class="text-end">@InventoryDetailsViewHelper.FormatStatsNumber(stat.Value.Min)</td>
+                                        <td class="text-end">@InventoryDetailsViewHelper.FormatStatsNumber(stat.Value.Max)</td>
+                                        <td class="text-end">@InventoryDetailsViewHelper.FormatStatsNumber(stat.Value.Average)</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td colspan="4"><div class="empty-state empty-state-table">@T["NoNumericStats"]</div></td></tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-lg-6">
+                        <h3 class="h6">@T["FrequentValues"]</h3>
+                        <div class="builder-list">
+                            @if (Model.Stats!.FrequentTextValues.Any())
+                            {
+                                @foreach (var stat in Model.Stats!.FrequentTextValues)
+                                {
+                                    <article class="builder-row stats-frequent-card">
+                                        <div>
+                                            <strong title="@stat.Value.FieldKey">@stat.Value.Label</strong>
+                                            <span class="frequent-values-list">
+                                                @foreach (var value in stat.Value.Values)
+                                                {
+                                                    <span class="frequent-value-chip" title="@value.Value">
+                                                        <span class="frequent-value-text">@value.Value</span>
+                                                        <span class="count-pill">@value.Count</span>
+                                                    </span>
+                                                }
+                                            </span>
+                                        </div>
+                                    </article>
+                                }
+                            }
+                            else
+                            {
+                                <div class="empty-state">@T["NoFrequentValues"]</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>

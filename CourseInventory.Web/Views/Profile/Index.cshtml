@@ -20,7 +20,10 @@
             <p class="text-body-secondary mb-0">@userName</p>
         </div>
     </div>
-    <a class="btn btn-primary glow-button" asp-controller="Inventories" asp-action="Create">@T["NewInventory"]</a>
+    <div class="d-flex flex-wrap gap-2 justify-content-end">
+        <a class="btn btn-outline-secondary" asp-controller="Profile" asp-action="Salesforce">Send profile to Salesforce</a>
+        <a class="btn btn-primary glow-button" asp-controller="Inventories" asp-action="Create">@T["NewInventory"]</a>
+    </div>
 </section>
 
 <section class="profile-stats mb-4" aria-label="@T["ProfileSummary"]">
@@ -132,3 +135,24 @@
         </div>
     </section>
 </div>
+
+@if (TempData.Peek("Success") is string salesforceSuccess)
+{
+    <div class="toast-container position-fixed top-0 end-0 p-3 inventory-toast-container">
+        <div class="toast inventory-toast text-bg-success border-0" role="status" aria-live="polite" aria-atomic="true" data-profile-toast>
+            <div class="d-flex">
+                <div class="toast-body">@salesforceSuccess</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        const profileToast = document.querySelector('[data-profile-toast]');
+        if (profileToast && window.bootstrap) {
+            new bootstrap.Toast(profileToast, { delay: 4200 }).show();
+        }
+    </script>
+}

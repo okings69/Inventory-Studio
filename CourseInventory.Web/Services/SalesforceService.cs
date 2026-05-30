@@ -75,14 +75,23 @@ public class SalesforceService(
 
     private async Task<SalesforceAuthResponse?> AuthenticateAsync(CancellationToken cancellationToken)
     {
-        using var content = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            ["grant_type"] = "password",
-            ["client_id"] = salesforce.ClientId,
-            ["client_secret"] = salesforce.ClientSecret,
-            ["username"] = salesforce.Username,
-            ["password"] = salesforce.Password + salesforce.SecurityToken
-        });
+        var values = salesforce.UsesClientCredentials
+            ? new Dictionary<string, string>
+            {
+                ["grant_type"] = "client_credentials",
+                ["client_id"] = salesforce.ClientId,
+                ["client_secret"] = salesforce.ClientSecret
+            }
+            : new Dictionary<string, string>
+            {
+                ["grant_type"] = "password",
+                ["client_id"] = salesforce.ClientId,
+                ["client_secret"] = salesforce.ClientSecret,
+                ["username"] = salesforce.Username,
+                ["password"] = salesforce.Password + salesforce.SecurityToken
+            };
+
+        using var content = new FormUrlEncodedContent(values);
 
         using var response = await http.PostAsync(
             BuildUrl(salesforce.LoginUrl, "/services/oauth2/token"),
@@ -91,7 +100,12 @@ public class SalesforceService(
 
         if (!response.IsSuccessStatusCode)
         {
-            logger.LogWarning("Salesforce authentication failed with status {StatusCode}", response.StatusCode);
+            var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
+            logger.LogWarning(
+                "Salesforce authentication failed for {AuthFlow} flow with status {StatusCode}: {Response}",
+                salesforce.AuthFlow,
+                response.StatusCode,
+                responseText);
             return null;
         }
 

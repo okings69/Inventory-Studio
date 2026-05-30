@@ -60,6 +60,7 @@ This project uses Salesforce's OAuth username-password flow only for a course de
 Required values:
 
 ```text
+Salesforce:AuthFlow=Password
 Salesforce:ClientId
 Salesforce:ClientSecret
 Salesforce:Username
@@ -70,6 +71,45 @@ Salesforce:ApiVersion
 ```
 
 Salesforce recommends using more secure flows, such as web server OAuth with PKCE or client credentials, when possible. Official username-password flow documentation: <https://help.salesforce.com/s/articleView?id=remoteaccess_oauth_username_password_flow.htm&type=5>.
+
+### Recommended fallback for External Client Apps: Client Credentials
+
+If your Salesforce org uses the newer External Client App UI and username-password keeps failing with `invalid_grant`, use the client credentials flow instead. This is usually easier for a server-side ASP.NET Core demo because no Salesforce user's password or security token is stored.
+
+In Salesforce:
+
+1. Open `Setup` -> `App Manager`.
+2. Open your `Inventory Studio` external client app.
+3. In OAuth settings, enable the client credentials flow.
+4. In the app policies, choose an integration user for the flow to run as.
+5. Make sure that user can create `Account` and `Contact` records.
+6. Copy your org's My Domain URL, for example:
+
+   ```text
+   https://your-domain.my.salesforce.com
+   ```
+
+For client credentials, configure:
+
+```powershell
+dotnet user-secrets set "Salesforce:AuthFlow" "ClientCredentials"
+dotnet user-secrets set "Salesforce:ClientId" "YOUR_CONSUMER_KEY"
+dotnet user-secrets set "Salesforce:ClientSecret" "YOUR_CONSUMER_SECRET"
+dotnet user-secrets set "Salesforce:LoginUrl" "https://your-domain.my.salesforce.com"
+dotnet user-secrets set "Salesforce:ApiVersion" "60.0"
+```
+
+For production environment variables:
+
+```text
+Salesforce__AuthFlow=ClientCredentials
+Salesforce__ClientId=YOUR_CONSUMER_KEY
+Salesforce__ClientSecret=YOUR_CONSUMER_SECRET
+Salesforce__LoginUrl=https://your-domain.my.salesforce.com
+Salesforce__ApiVersion=60.0
+```
+
+Salesforce notes that client credentials requests must use the org's My Domain URL, not `https://login.salesforce.com`.
 
 ## 5. Get the Security Token
 
@@ -87,6 +127,7 @@ Do not put Salesforce secrets in `appsettings.json`.
 From the web project directory:
 
 ```powershell
+dotnet user-secrets set "Salesforce:AuthFlow" "Password"
 dotnet user-secrets set "Salesforce:ClientId" "YOUR_CONSUMER_KEY"
 dotnet user-secrets set "Salesforce:ClientSecret" "YOUR_CONSUMER_SECRET"
 dotnet user-secrets set "Salesforce:Username" "your-salesforce-user@example.com"
@@ -101,6 +142,7 @@ dotnet user-secrets set "Salesforce:ApiVersion" "60.0"
 Use double underscores for nested configuration:
 
 ```text
+Salesforce__AuthFlow=Password
 Salesforce__ClientId=YOUR_CONSUMER_KEY
 Salesforce__ClientSecret=YOUR_CONSUMER_SECRET
 Salesforce__Username=your-salesforce-user@example.com

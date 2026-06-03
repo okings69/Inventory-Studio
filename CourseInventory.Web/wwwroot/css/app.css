@@ -2282,6 +2282,146 @@ body,
   color: var(--text-muted);
 }
 
+.api-token-panel {
+  overflow: hidden;
+}
+
+.api-status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: .32rem .7rem;
+  border-radius: 999px;
+  border: 1px solid var(--premium-border);
+  font-size: .82rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.api-status-badge.is-ready {
+  border-color: color-mix(in srgb, #22c55e 42%, var(--premium-border));
+  background: color-mix(in srgb, #22c55e 13%, transparent);
+  color: #16a34a;
+}
+
+.api-status-badge.is-missing {
+  border-color: color-mix(in srgb, #f59e0b 42%, var(--premium-border));
+  background: color-mix(in srgb, #f59e0b 13%, transparent);
+  color: #d97706;
+}
+
+.api-token-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.api-token-card {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--premium-border);
+  border-radius: var(--is-radius, 8px);
+  background: color-mix(in srgb, var(--card-bg-raised) 46%, var(--card-bg));
+}
+
+.api-token-panel > .api-token-card,
+.api-token-panel > .api-token-secret {
+  margin-inline: 1rem;
+}
+
+.api-token-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: .85rem;
+}
+
+.api-token-card__header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 850;
+}
+
+.api-token-card__header p,
+.api-token-meta {
+  margin: .18rem 0 0;
+  color: var(--text-muted);
+  font-size: .84rem;
+}
+
+.api-token-alert {
+  border-radius: var(--is-radius, 8px);
+}
+
+.api-copy-row {
+  display: flex;
+  align-items: stretch;
+  gap: .55rem;
+  min-width: 0;
+}
+
+.api-copy-row .form-control {
+  min-width: 0;
+}
+
+.api-token-code {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1 1 auto;
+  min-height: 42px;
+  padding: .65rem .8rem;
+  border: 1px solid var(--premium-border);
+  border-radius: 10px;
+  background: var(--card-bg);
+  color: var(--is-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-test-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+}
+
+.api-test-pill {
+  display: grid;
+  gap: .15rem;
+  min-height: 72px;
+  padding: .75rem;
+  border: 1px solid var(--premium-border);
+  border-radius: 10px;
+  background: var(--card-bg);
+}
+
+.api-test-pill span {
+  color: var(--text-muted);
+  font-size: .78rem;
+  font-weight: 750;
+}
+
+.api-test-pill strong {
+  font-size: .95rem;
+}
+
+.api-test-pill.is-denied {
+  border-color: color-mix(in srgb, #ef4444 36%, var(--premium-border));
+  background: color-mix(in srgb, #ef4444 7%, var(--card-bg));
+}
+
+.api-test-pill.is-ok {
+  border-color: color-mix(in srgb, #22c55e 36%, var(--premium-border));
+  background: color-mix(in srgb, #22c55e 7%, var(--card-bg));
+}
+
+.api-token-secret {
+  border-radius: var(--is-radius, 8px);
+}
+
 .action-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -2611,6 +2751,19 @@ body,
 
   .action-toolbar .btn,
   .action-toolbar form {
+    width: 100%;
+  }
+
+  .api-token-grid,
+  .api-test-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .api-copy-row {
+    flex-direction: column;
+  }
+
+  .api-copy-row .btn {
     width: 100%;
   }
 

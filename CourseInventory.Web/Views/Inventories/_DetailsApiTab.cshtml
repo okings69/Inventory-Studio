@@ -1,60 +1,156 @@
 @model InventoryDetailsViewModel
 @{
     var inventory = Model.Inventory;
-    var endpoint = $"{Context.Request.Scheme}://{Context.Request.Host}/api/inventories/aggregates?token=YOUR_TOKEN";
+    var baseUrl = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.PathBase}";
+    var endpointPath = "/api/inventories/aggregates";
+    var sourceUrl = $"{baseUrl}{endpointPath}";
     var rawToken = TempData["ApiToken"] as string;
+    var hasVisibleToken = !string.IsNullOrWhiteSpace(rawToken);
+    var maskedToken = hasVisibleToken
+        ? rawToken!.Length <= 12
+            ? rawToken
+            : $"{rawToken[..6]}...{rawToken[^5..]}"
+        : "Generate or reset the token to see it once.";
+    var endpointWithToken = hasVisibleToken
+        ? $"{sourceUrl}?token={Uri.EscapeDataString(rawToken!)}"
+        : $"{sourceUrl}?token=ACTUAL_TOKEN";
 }
 
 <section class="tab-pane fade" id="api">
-    <div class="panel details-panel">
+    <div class="panel details-panel api-token-panel">
         <div class="panel-header">
             <div>
                 <h2>API Token</h2>
                 <p>Use this token to let Odoo read aggregated results for this inventory only.</p>
             </div>
+            <span class="api-status-badge @(string.IsNullOrWhiteSpace(inventory.ApiTokenHash) ? "is-missing" : "is-ready")">
+                @(string.IsNullOrWhiteSpace(inventory.ApiTokenHash) ? "No token" : "Token active")
+            </span>
         </div>
 
-        <div class="p-3">
-            @if (!string.IsNullOrWhiteSpace(rawToken))
-            {
-                <div class="alert alert-warning">
-                    <strong>Copy this token now.</strong> It is shown only once.
-                    <pre class="mt-2 mb-0"><code>@rawToken</code></pre>
+        <div class="api-token-grid">
+            <article class="api-token-card">
+                <div class="api-token-card__header">
+                    <div>
+                        <h3>Token</h3>
+                        <p>Shown only after generation or reset.</p>
+                    </div>
+                    @if (inventory.ApiTokenCreatedAt is not null)
+                    {
+                        <span class="api-token-meta">@inventory.ApiTokenCreatedAt.Value.ToString("u")</span>
+                    }
                 </div>
-            }
 
-            <div class="mb-3">
-                <label class="form-label">Endpoint URL</label>
-                <input class="form-control" value="@endpoint" readonly />
-            </div>
-
-            <div class="mb-3">
-                <div class="text-body-secondary small">Token status</div>
-                @if (string.IsNullOrWhiteSpace(inventory.ApiTokenHash))
+                @if (hasVisibleToken)
                 {
-                    <strong>No API token has been generated yet.</strong>
+                    <div class="alert alert-warning api-token-alert">
+                        <strong>Copy this token now.</strong> It will disappear after refresh.
+                    </div>
                 }
                 else
                 {
-                    <strong>Token generated</strong>
-                    @if (inventory.ApiTokenCreatedAt is not null)
-                    {
-                        <span class="text-body-secondary">at @inventory.ApiTokenCreatedAt.Value.ToString("u")</span>
-                    }
+                    <div class="alert alert-secondary api-token-alert">
+                        The full token is not stored in the UI. Reset it if you need a new copy.
+                    </div>
                 }
+
+                <div class="api-copy-row">
+                    <code class="api-token-code" data-token-display data-masked-token="@maskedToken" data-full-token="@rawToken">@maskedToken</code>
+                    <button class="btn btn-outline-secondary btn-sm" type="button" data-toggle-token @(hasVisibleToken ? null : "disabled")>Show</button>
+                    <button class="btn btn-outline-primary btn-sm" type="button" data-copy-value="@rawToken" @(hasVisibleToken ? null : "disabled")>Copy token</button>
+                </div>
+
+                <form asp-action="GenerateApiToken" asp-route-id="@inventory.Id" method="post" class="mt-3">
+                    @Html.AntiForgeryToken()
+                    <button class="btn btn-primary" type="submit">
+                        @(string.IsNullOrWhiteSpace(inventory.ApiTokenHash) ? "Generate API token" : "Reset API token")
+                    </button>
+                </form>
+            </article>
+
+            <article class="api-token-card">
+                <div class="api-token-card__header">
+                    <div>
+                        <h3>Endpoints</h3>
+                        <p>Current host is used automatically.</p>
+                    </div>
+                </div>
+
+                <label class="form-label">Endpoint without token</label>
+                <div class="api-copy-row mb-3">
+                    <input class="form-control" value="@endpointPath" readonly />
+                </div>
+
+                <label class="form-label">Endpoint with token</label>
+                <div class="api-copy-row">
+                    <input class="form-control" value="@endpointWithToken" readonly />
+                    <button class="btn btn-outline-primary btn-sm" type="button" data-copy-value="@endpointWithToken" @(hasVisibleToken ? null : "disabled")>Copy endpoint URL</button>
+                </div>
+
+                <div class="api-test-grid mt-3">
+                    <div class="api-test-pill is-denied">
+                        <span>Without token</span>
+                        <strong>401 Unauthorized</strong>
+                    </div>
+                    <div class="api-test-pill is-ok">
+                        <span>With token</span>
+                        <strong>JSON aggregate data</strong>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <article class="api-token-card mt-3">
+            <div class="api-token-card__header">
+                <div>
+                    <h3>How to use in Odoo</h3>
+                    <p>Paste these values into the Inventory Studio Viewer import form.</p>
+                </div>
             </div>
 
-            <div class="alert alert-danger">
-                The API token is secret. Anyone with the token can read aggregate JSON for this inventory.
-                Reset the token if it was shared by mistake.
+            <div class="row g-3">
+                <div class="col-lg-7">
+                    <label class="form-label">Source URL</label>
+                    <input class="form-control" value="@sourceUrl" readonly />
+                </div>
+                <div class="col-lg-5">
+                    <label class="form-label">API Token</label>
+                    <input class="form-control" value="@(hasVisibleToken ? rawToken : "token generated in this tab")" readonly />
+                </div>
             </div>
+        </article>
 
-            <form asp-action="GenerateApiToken" asp-route-id="@inventory.Id" method="post">
-                @Html.AntiForgeryToken()
-                <button class="btn btn-primary" type="submit">
-                    @(string.IsNullOrWhiteSpace(inventory.ApiTokenHash) ? "Generate API token" : "Reset API token")
-                </button>
-            </form>
+        <div class="alert alert-danger api-token-secret mt-3">
+            The API token is secret. Anyone with the token can read aggregate JSON for this inventory.
+            Reset the token if it was shared by mistake.
         </div>
     </div>
+
+    <script>
+        (() => {
+            const panel = document.currentScript.closest('#api');
+            if (!panel) return;
+
+            panel.querySelectorAll('[data-copy-value]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const value = button.dataset.copyValue;
+                    if (!value) return;
+
+                    await navigator.clipboard.writeText(value);
+                    const previous = button.textContent;
+                    button.textContent = 'Copied';
+                    window.setTimeout(() => button.textContent = previous, 1200);
+                });
+            });
+
+            const toggle = panel.querySelector('[data-toggle-token]');
+            const display = panel.querySelector('[data-token-display]');
+            toggle?.addEventListener('click', () => {
+                const isShowing = toggle.dataset.showing === 'true';
+                toggle.dataset.showing = (!isShowing).toString();
+                display.textContent = isShowing ? display.dataset.maskedToken : display.dataset.fullToken;
+                toggle.textContent = isShowing ? 'Show' : 'Hide';
+            });
+        })();
+    </script>
 </section>

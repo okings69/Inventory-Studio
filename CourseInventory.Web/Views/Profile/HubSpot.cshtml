@@ -29,6 +29,50 @@
         <div class="alert alert-danger" role="alert">@error</div>
     }
 
+    @if (Model.IsSuccess)
+    {
+        <div class="alert alert-success" role="status">
+            <h3 class="h5 mb-3">@Model.Message</h3>
+            <dl class="row mb-0">
+                <dt class="col-sm-3">Company</dt>
+                <dd class="col-sm-9">@Model.CompanyName</dd>
+
+                <dt class="col-sm-3">Contact</dt>
+                <dd class="col-sm-9">@Model.ContactName</dd>
+
+                <dt class="col-sm-3">Email</dt>
+                <dd class="col-sm-9">@Model.Email</dd>
+
+                <dt class="col-sm-3">Company ID</dt>
+                <dd class="col-sm-9">
+                    @if (!string.IsNullOrWhiteSpace(Model.HubSpotCompanyUrl))
+                    {
+                        <a href="@Model.HubSpotCompanyUrl" target="_blank" rel="noopener noreferrer">@Model.CompanyId</a>
+                    }
+                    else
+                    {
+                        @Model.CompanyId
+                    }
+                </dd>
+
+                <dt class="col-sm-3">Contact ID</dt>
+                <dd class="col-sm-9">
+                    @if (!string.IsNullOrWhiteSpace(Model.HubSpotContactUrl))
+                    {
+                        <a href="@Model.HubSpotContactUrl" target="_blank" rel="noopener noreferrer">@Model.ContactId</a>
+                    }
+                    else
+                    {
+                        @Model.ContactId
+                    }
+                </dd>
+
+                <dt class="col-sm-3">Association</dt>
+                <dd class="col-sm-9">@(Model.AssociationCompleted ? "completed" : "not completed")</dd>
+            </dl>
+        </div>
+    }
+
     <form asp-action="HubSpot" method="post" class="row g-3">
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="UserId" />

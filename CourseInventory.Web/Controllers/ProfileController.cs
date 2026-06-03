@@ -75,12 +75,28 @@ public class ProfileController(
         if (!result.Success)
         {
             ViewData["HubSpotError"] = result.Error ?? "Profile could not be sent to HubSpot.";
+            model.CompanyId = result.CompanyId;
+            model.ContactId = result.ContactId;
+            model.CompanyName = result.CompanyName ?? model.CompanyName;
+            model.ContactName = result.ContactName;
+            model.Email = result.Email;
+            model.AssociationCompleted = result.AssociationCreated;
+            model.HubSpotCompanyUrl = result.HubSpotCompanyUrl;
+            model.HubSpotContactUrl = result.HubSpotContactUrl;
             return View(model);
         }
 
-        var associationText = result.AssociationCreated ? " The contact was associated with the company." : string.Empty;
-        TempData["HubSpotSuccess"] = $"HubSpot Company {result.CompanyId} and Contact {result.ContactId} were created.{associationText}";
-        return RedirectToAction(nameof(Index));
+        model.IsSuccess = true;
+        model.Message = "HubSpot synchronization successful.";
+        model.CompanyId = result.CompanyId;
+        model.ContactId = result.ContactId;
+        model.CompanyName = result.CompanyName ?? model.CompanyName;
+        model.ContactName = result.ContactName;
+        model.Email = result.Email;
+        model.AssociationCompleted = result.AssociationCreated;
+        model.HubSpotCompanyUrl = result.HubSpotCompanyUrl;
+        model.HubSpotContactUrl = result.HubSpotContactUrl;
+        return View(model);
     }
 
     private async Task<ApplicationUser?> FindPermittedTargetUserAsync(string? userId)

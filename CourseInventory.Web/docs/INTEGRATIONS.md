@@ -26,6 +26,12 @@ From the web project directory:
 dotnet user-secrets set "HubSpot:AccessToken" "YOUR_HUBSPOT_PRIVATE_APP_ACCESS_TOKEN"
 ```
 
+Optionally set your HubSpot portal ID to make the success page show direct links to the created CRM records:
+
+```powershell
+dotnet user-secrets set "HubSpot:PortalId" "YOUR_HUBSPOT_PORTAL_ID"
+```
+
 Restart the app after changing user-secrets:
 
 ```powershell
@@ -38,6 +44,7 @@ Use a double underscore for nested configuration:
 
 ```text
 HubSpot__AccessToken=YOUR_HUBSPOT_PRIVATE_APP_ACCESS_TOKEN
+HubSpot__PortalId=YOUR_HUBSPOT_PORTAL_ID
 ```
 
 ### Browser Demo Steps
@@ -48,9 +55,10 @@ HubSpot__AccessToken=YOUR_HUBSPOT_PRIVATE_APP_ACCESS_TOKEN
 4. Click `Send profile to HubSpot`.
 5. Fill in company, phone, job title, city, country, and notes.
 6. Submit the form.
-7. In HubSpot, open Companies and verify that the new Company exists.
-8. Open Contacts and verify that the new Contact exists.
-9. Confirm that the Contact is associated with the Company when HubSpot accepts the default association.
+7. Confirm Inventory Studio shows `HubSpot synchronization successful` with Company ID, Contact ID, and `Association: completed`.
+8. In HubSpot, open Companies and verify that the Company exists or was reused.
+9. Open Contacts and verify that the Contact exists or was reused.
+10. Confirm that the Contact is associated with the Company.
 
 ### Troubleshooting
 
@@ -58,7 +66,8 @@ HubSpot__AccessToken=YOUR_HUBSPOT_PRIVATE_APP_ACCESS_TOKEN
 - `HubSpot authentication failed`: check that the private app token is correct and still active.
 - `Company could not be created`: confirm the token has company write permission and the submitted company name is valid.
 - `Contact could not be created`: confirm the token has contact write permission and the submitted email is not rejected by HubSpot.
-- If the Contact and Company are created but not associated, the app logs the HubSpot association response and keeps the CRM records. You can associate them manually in HubSpot for the demo.
+- `Contact was created but could not be associated with the company`: confirm the token has CRM association permissions and check the `[HubSpot] AssociateContactCompany` logs.
+- HubSpot returns a duplicate record response: Inventory Studio searches by company domain/name or contact email and reuses the existing record.
 - Never commit HubSpot access tokens or paste them into `appsettings.json`.
 
 ## Google Drive Support Tickets

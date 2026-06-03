@@ -144,7 +144,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSignalR();
-builder.Services.Configure<SalesforceOptions>(builder.Configuration.GetSection("Salesforce"));
+builder.Services.Configure<HubSpotOptions>(builder.Configuration.GetSection("HubSpot"));
 builder.Services.AddScoped<IAccessService, AccessService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IItemService, ItemService>();
@@ -159,7 +159,7 @@ builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IImageService, ImageService>();
 builder.Services.AddSingleton<IUiTextService, UiTextService>();
 builder.Services.AddScoped<IUserActivityService, UserActivityService>();
-builder.Services.AddHttpClient<ISalesforceService, SalesforceService>();
+builder.Services.AddHttpClient<IHubSpotService, HubSpotService>();
 builder.Services.Configure<GoogleDriveOptions>(builder.Configuration.GetSection("GoogleDrive"));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ISupportTicketService, SupportTicketService>();

@@ -1,0 +1,85 @@
+@model HubSpotProfileFormViewModel
+@{
+    ViewData["Title"] = "Send profile to HubSpot";
+}
+
+<section class="inventory-hero mb-4">
+    <div class="inventory-hero-content">
+        <div>
+            <p class="eyebrow mb-2">CRM</p>
+            <h1>Send profile to HubSpot</h1>
+            <p class="text-body-secondary mb-0">Create a HubSpot Company and a linked Contact for @Model.UserName.</p>
+        </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary" asp-controller="Profile" asp-action="Index">Back to profile</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <h2>HubSpot details</h2>
+            <p>Only profile data and the fields below are sent. HubSpot credentials stay on the server.</p>
+        </div>
+    </div>
+
+    @if (ViewData["HubSpotError"] is string error)
+    {
+        <div class="alert alert-danger" role="alert">@error</div>
+    }
+
+    <form asp-action="HubSpot" method="post" class="row g-3">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="UserId" />
+        <input type="hidden" asp-for="UserName" />
+        <input type="hidden" asp-for="UserEmail" />
+
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="col-lg-8">
+            <label asp-for="CompanyName" class="form-label">Company name</label>
+            <input asp-for="CompanyName" class="form-control" autocomplete="organization" />
+            <span asp-validation-for="CompanyName" class="text-danger"></span>
+        </div>
+
+        <div class="col-lg-4">
+            <label asp-for="Phone" class="form-label">Phone</label>
+            <input asp-for="Phone" class="form-control" autocomplete="tel" />
+            <span asp-validation-for="Phone" class="text-danger"></span>
+        </div>
+
+        <div class="col-lg-5">
+            <label asp-for="JobTitle" class="form-label">Job title</label>
+            <input asp-for="JobTitle" class="form-control" autocomplete="organization-title" />
+            <span asp-validation-for="JobTitle" class="text-danger"></span>
+        </div>
+
+        <div class="col-lg-4">
+            <label asp-for="City" class="form-label">City</label>
+            <input asp-for="City" class="form-control" autocomplete="address-level2" />
+            <span asp-validation-for="City" class="text-danger"></span>
+        </div>
+
+        <div class="col-lg-3">
+            <label asp-for="Country" class="form-label">Country</label>
+            <input asp-for="Country" class="form-control" autocomplete="country-name" />
+            <span asp-validation-for="Country" class="text-danger"></span>
+        </div>
+
+        <div class="col-12">
+            <label asp-for="Notes" class="form-label">Notes</label>
+            <textarea asp-for="Notes" class="form-control" rows="5"></textarea>
+            <span asp-validation-for="Notes" class="text-danger"></span>
+        </div>
+
+        <div class="col-12 d-flex flex-wrap gap-2 justify-content-end">
+            <a class="btn btn-outline-secondary" asp-controller="Profile" asp-action="Index">Cancel</a>
+            <button type="submit" class="btn btn-primary glow-button">Create Company and Contact</button>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

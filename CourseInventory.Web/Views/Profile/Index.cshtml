@@ -21,7 +21,7 @@
         </div>
     </div>
     <div class="d-flex flex-wrap gap-2 justify-content-end">
-        <a class="btn btn-outline-secondary" asp-controller="Profile" asp-action="Salesforce">Send profile to Salesforce</a>
+        <a class="btn btn-outline-secondary" asp-controller="Profile" asp-action="HubSpot">Send profile to HubSpot</a>
         <a class="btn btn-primary glow-button" asp-controller="Inventories" asp-action="Create">@T["NewInventory"]</a>
     </div>
 </section>
@@ -136,12 +136,12 @@
     </section>
 </div>
 
-@if (TempData.Peek("Success") is string salesforceSuccess)
+@if (TempData.Peek("HubSpotSuccess") is string hubSpotSuccess)
 {
     <div class="toast-container position-fixed top-0 end-0 p-3 inventory-toast-container">
         <div class="toast inventory-toast text-bg-success border-0" role="status" aria-live="polite" aria-atomic="true" data-profile-toast>
             <div class="d-flex">
-                <div class="toast-body">@salesforceSuccess</div>
+                <div class="toast-body">@hubSpotSuccess</div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>

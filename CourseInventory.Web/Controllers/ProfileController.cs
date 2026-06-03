@@ -14,7 +14,7 @@ public class ProfileController(
     ApplicationDbContext db,
     IAccessService access,
     UserManager<ApplicationUser> users,
-    ISalesforceService salesforce) : Controller
+    IHubSpotService hubSpot) : Controller
 {
     public async Task<IActionResult> Index()
     {
@@ -43,7 +43,7 @@ public class ProfileController(
     }
 
     [HttpGet]
-    public async Task<IActionResult> Salesforce(string? userId = null)
+    public async Task<IActionResult> HubSpot(string? userId = null)
     {
         var targetUser = await FindPermittedTargetUserAsync(userId);
         if (targetUser is null)
@@ -51,11 +51,11 @@ public class ProfileController(
             return Forbid();
         }
 
-        return View(BuildSalesforceForm(targetUser));
+        return View(BuildHubSpotForm(targetUser));
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Salesforce(SalesforceProfileFormViewModel model, CancellationToken cancellationToken)
+    public async Task<IActionResult> HubSpot(HubSpotProfileFormViewModel model, CancellationToken cancellationToken)
     {
         var targetUser = await FindPermittedTargetUserAsync(model.UserId);
         if (targetUser is null)
@@ -71,15 +71,15 @@ public class ProfileController(
             return View(model);
         }
 
-        var result = await salesforce.SendProfileAsync(targetUser, model, cancellationToken);
+        var result = await hubSpot.SendProfileAsync(targetUser, model, cancellationToken);
         if (!result.Success)
         {
-            var error = result.Error ?? "Profile could not be sent to Salesforce.";
-            ViewData["SalesforceError"] = error;
+            ViewData["HubSpotError"] = result.Error ?? "Profile could not be sent to HubSpot.";
             return View(model);
         }
 
-        TempData["Success"] = $"Salesforce Account {result.AccountId} and Contact {result.ContactId} were created.";
+        var associationText = result.AssociationCreated ? " The contact was associated with the company." : string.Empty;
+        TempData["HubSpotSuccess"] = $"HubSpot Company {result.CompanyId} and Contact {result.ContactId} were created.{associationText}";
         return RedirectToAction(nameof(Index));
     }
 
@@ -100,7 +100,7 @@ public class ProfileController(
         return await users.FindByIdAsync(targetUserId);
     }
 
-    private static SalesforceProfileFormViewModel BuildSalesforceForm(ApplicationUser user) => new()
+    private static HubSpotProfileFormViewModel BuildHubSpotForm(ApplicationUser user) => new()
     {
         UserId = user.Id,
         UserName = user.UserName ?? user.Email ?? "Inventory Studio user",

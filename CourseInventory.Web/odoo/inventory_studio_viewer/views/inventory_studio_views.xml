@@ -4,11 +4,11 @@
         <field name="name">inventory.studio.import.tree</field>
         <field name="model">inventory.studio.import</field>
         <field name="arch" type="xml">
-            <tree>
+            <list>
                 <field name="name"/>
                 <field name="source_url"/>
                 <field name="imported_at"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -30,20 +30,20 @@
                     <notebook>
                         <page string="Fields">
                             <field name="field_ids" readonly="1">
-                                <tree>
+                                <list>
                                     <field name="title"/>
                                     <field name="field_type"/>
-                                </tree>
+                                </list>
                             </field>
                         </page>
                         <page string="Aggregates">
                             <field name="aggregate_ids" readonly="1">
-                                <tree>
+                                <list>
                                     <field name="field_title"/>
                                     <field name="aggregate_type"/>
                                     <field name="value"/>
                                     <field name="count"/>
-                                </tree>
+                                </list>
                             </field>
                         </page>
                     </notebook>
@@ -55,7 +55,7 @@
     <record id="action_inventory_studio_import" model="ir.actions.act_window">
         <field name="name">Inventory Studio</field>
         <field name="res_model">inventory.studio.import</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
     </record>
 
     <menuitem id="menu_inventory_studio_root" name="Inventory Studio"/>

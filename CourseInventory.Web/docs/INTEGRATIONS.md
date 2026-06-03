@@ -1,5 +1,66 @@
 # Inventory Studio Integrations
 
+## HubSpot CRM
+
+Inventory Studio can send a signed-in user's profile to HubSpot CRM by creating:
+
+1. a HubSpot Company from the submitted company information
+2. a HubSpot Contact from the Inventory Studio user profile
+3. a default Contact-to-Company association when HubSpot accepts it
+
+The integration uses `IHubSpotService`, `HttpClientFactory`, and `HubSpotOptions`. The HubSpot private app token must stay in user-secrets locally or environment variables in production.
+
+### HubSpot Setup
+
+1. In HubSpot, create a Private App.
+2. Add CRM object permissions for companies and contacts:
+   - `crm.objects.companies.write`
+   - `crm.objects.contacts.write`
+3. Copy the private app access token.
+
+### Local User-Secrets
+
+From the web project directory:
+
+```powershell
+dotnet user-secrets set "HubSpot:AccessToken" "YOUR_HUBSPOT_PRIVATE_APP_ACCESS_TOKEN"
+```
+
+Restart the app after changing user-secrets:
+
+```powershell
+dotnet run --urls http://localhost:5158
+```
+
+### Render Environment Variable
+
+Use a double underscore for nested configuration:
+
+```text
+HubSpot__AccessToken=YOUR_HUBSPOT_PRIVATE_APP_ACCESS_TOKEN
+```
+
+### Browser Demo Steps
+
+1. Start Inventory Studio.
+2. Sign in.
+3. Open `Profile`.
+4. Click `Send profile to HubSpot`.
+5. Fill in company, phone, job title, city, country, and notes.
+6. Submit the form.
+7. In HubSpot, open Companies and verify that the new Company exists.
+8. Open Contacts and verify that the new Contact exists.
+9. Confirm that the Contact is associated with the Company when HubSpot accepts the default association.
+
+### Troubleshooting
+
+- `HubSpot is not configured`: set `HubSpot:AccessToken` locally or `HubSpot__AccessToken` on Render.
+- `HubSpot authentication failed`: check that the private app token is correct and still active.
+- `Company could not be created`: confirm the token has company write permission and the submitted company name is valid.
+- `Contact could not be created`: confirm the token has contact write permission and the submitted email is not rejected by HubSpot.
+- If the Contact and Company are created but not associated, the app logs the HubSpot association response and keeps the CRM records. You can associate them manually in HubSpot for the demo.
+- Never commit HubSpot access tokens or paste them into `appsettings.json`.
+
 ## Google Drive Support Tickets
 
 Inventory Studio can create support tickets by uploading one JSON file into a Google Drive folder. A Google Apps Script watches the folder, reads each JSON file, sends the Gmail notification, and renames the file with `PROCESSED_`.

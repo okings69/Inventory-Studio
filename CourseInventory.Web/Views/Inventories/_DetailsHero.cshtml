@@ -20,8 +20,11 @@
                 <div class="markdown details-description">@Html.Raw(Markdown.ToHtml(descriptionMarkdown))</div>
             }
         </div>
-        @if (canEditItems)
-        {
-            <a class="btn btn-primary glow-button" asp-controller="Items" asp-action="Create" asp-route-inventoryId="@inventory.Id">@T["AddItem"]</a>
-        }
+        <div class="details-hero-actions">
+            <a class="btn btn-outline-secondary" asp-controller="Inventories" asp-action="Help" asp-route-id="@inventory.Id">Help</a>
+            @if (canEditItems)
+            {
+                <a class="btn btn-primary glow-button" asp-controller="Items" asp-action="Create" asp-route-inventoryId="@inventory.Id">@T["AddItem"]</a>
+            }
+        </div>
     </div>

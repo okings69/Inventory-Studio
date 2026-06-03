@@ -185,6 +185,14 @@ body,
   transform: translateY(-1px);
 }
 
+.details-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: .65rem;
+}
+
 .app-preferences {
   align-items: center;
 }
@@ -749,6 +757,13 @@ body,
 
 .inventory-data-table tbody tr:hover {
   background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.inventory-row-actions {
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: .45rem;
 }
 
 .table-sort-button {

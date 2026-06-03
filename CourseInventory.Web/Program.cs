@@ -44,7 +44,7 @@ var authentication = builder.Services.AddAuthentication();
 
 var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
 var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
-if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+if (GoogleOAuthConfiguration.HasUsableGoogleOAuthCredentials(builder.Configuration))
 {
     authentication.AddOpenIdConnect("Google", "Google", options =>
     {
@@ -66,6 +66,7 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
         options.Scope.Add("openid");
         options.Scope.Add("profile");
         options.Scope.Add("email");
+        options.Scope.Add("https://www.googleapis.com/auth/drive.file");
         options.Backchannel = new HttpClient(googleBackchannelHandler)
         {
             Timeout = TimeSpan.FromMinutes(3),
@@ -79,8 +80,17 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
         };
         options.Events.OnRemoteFailure = context =>
         {
-            context.Response.Redirect("/Account/Login?externalError=google");
+            var externalError = context.Failure?.Message.Contains("invalid_client", StringComparison.OrdinalIgnoreCase) == true
+                ? "google_invalid_client"
+                : "google";
+            context.Response.Redirect($"/Account/Login?externalError={externalError}");
             context.HandleResponse();
+            return Task.CompletedTask;
+        };
+        options.Events.OnRedirectToIdentityProvider = context =>
+        {
+            context.ProtocolMessage.SetParameter("access_type", "offline");
+            context.ProtocolMessage.SetParameter("prompt", "consent");
             return Task.CompletedTask;
         };
     });
@@ -132,6 +142,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 builder.Services.AddControllersWithViews();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSignalR();
 builder.Services.Configure<SalesforceOptions>(builder.Configuration.GetSection("Salesforce"));
 builder.Services.AddScoped<IAccessService, AccessService>();
@@ -149,6 +160,12 @@ builder.Services.AddScoped<IImageService, ImageService>();
 builder.Services.AddSingleton<IUiTextService, UiTextService>();
 builder.Services.AddScoped<IUserActivityService, UserActivityService>();
 builder.Services.AddHttpClient<ISalesforceService, SalesforceService>();
+builder.Services.Configure<GoogleDriveOptions>(builder.Configuration.GetSection("GoogleDrive"));
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<ISupportTicketService, SupportTicketService>();
+builder.Services.AddScoped<IGoogleDriveTicketUploadService, GoogleDriveTicketUploadService>();
+builder.Services.AddScoped<IGoogleOAuthTokenProvider, GoogleOAuthTokenProvider>();
+builder.Services.AddScoped<IGoogleDriveFileUploader, GoogleDriveFileUploader>();
 
 var app = builder.Build();
 

@@ -1,6 +1,7 @@
 using CourseInventory.Web.Models;
 using CourseInventory.Web.Services;
 using CourseInventory.Web.ViewModels;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -60,10 +61,7 @@ public class AccountController(
         await PopulateExternalLoginStateAsync();
         if (!string.IsNullOrWhiteSpace(externalError))
         {
-            var providerName = string.Equals(externalError, "facebook", StringComparison.OrdinalIgnoreCase)
-                ? FacebookProvider
-                : GoogleProvider;
-            ModelState.AddModelError(string.Empty, $"{providerName} login is temporarily unavailable. Please use email login or try again later.");
+            ModelState.AddModelError(string.Empty, BuildExternalLoginErrorMessage(externalError));
         }
         return View(new LoginViewModel());
     }
@@ -110,6 +108,22 @@ public class AccountController(
         return Challenge(properties, scheme.Name);
     }
 
+    [Authorize, HttpGet]
+    public async Task<IActionResult> GoogleDriveConsent(string? returnUrl = null)
+    {
+        var availableProviders = await signIn.GetExternalAuthenticationSchemesAsync();
+        var scheme = availableProviders.FirstOrDefault(p => string.Equals(p.Name, GoogleProvider, StringComparison.OrdinalIgnoreCase));
+        if (scheme is null)
+        {
+            TempData["Error"] = GetProviderUnavailableMessage(GoogleProvider);
+            return LocalRedirect(returnUrl ?? "/");
+        }
+
+        var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Account", new { returnUrl });
+        var properties = signIn.ConfigureExternalAuthenticationProperties(GoogleProvider, redirectUrl);
+        return Challenge(properties, GoogleProvider);
+    }
+
     public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null)
     {
         if (!string.IsNullOrWhiteSpace(remoteError))
@@ -117,6 +131,8 @@ public class AccountController(
             return await RenderLoginWithErrorAsync("External login could not be completed. Please use email login or try again later.", returnUrl);
         }
 
+        var externalAuthentication = await HttpContext.AuthenticateAsync(IdentityConstants.ExternalScheme);
+        var authenticationTokens = externalAuthentication.Properties?.GetTokens()?.ToArray() ?? [];
         var info = await signIn.GetExternalLoginInfoAsync();
         if (info is null)
         {
@@ -135,6 +151,7 @@ public class AccountController(
                     return await RenderLoginWithErrorAsync("External login could not be completed. Please contact support if this continues.", returnUrl);
                 }
 
+                await StoreGoogleTokensAsync(existingUser, info, authenticationTokens);
                 await userActivity.RecordLoginAsync(existingUser);
             }
 
@@ -178,6 +195,7 @@ public class AccountController(
         }
 
         await signIn.SignInAsync(user, false);
+        await StoreGoogleTokensAsync(user, info, authenticationTokens);
         await userActivity.RecordLoginAsync(user);
         return LocalRedirect(returnUrl ?? "/");
     }
@@ -214,9 +232,9 @@ public class AccountController(
             return messages;
         }
 
-        if (!HasProviderCredentials("Authentication:Google:ClientId", "Authentication:Google:ClientSecret"))
+        if (!GoogleOAuthConfiguration.HasUsableGoogleOAuthCredentials(configuration))
         {
-            messages.Add("Google login is hidden until Authentication:Google:ClientId and Authentication:Google:ClientSecret are provided through user-secrets or environment variables.");
+            messages.Add("Google login is hidden until a valid OAuth Web Client ID and client secret are provided through user-secrets or environment variables. The client ID must end with .apps.googleusercontent.com.");
         }
 
         if (!HasProviderCredentials("Authentication:Facebook:AppId", "Authentication:Facebook:AppSecret"))
@@ -238,17 +256,45 @@ public class AccountController(
 
         if (string.Equals(provider, GoogleProvider, StringComparison.OrdinalIgnoreCase))
         {
-            return HasProviderCredentials("Authentication:Google:ClientId", "Authentication:Google:ClientSecret")
+            return GoogleOAuthConfiguration.HasUsableGoogleOAuthCredentials(configuration)
                 ? "Google login is currently unavailable. Restart the application and try again."
-                : "Google login is not configured on this server.";
+                : "Google login is not configured with a valid OAuth Web Client ID. Create a Web application OAuth client in Google Cloud and update user-secrets.";
         }
 
         return "This external login provider is not available right now.";
     }
 
+    private string BuildExternalLoginErrorMessage(string externalError) =>
+        externalError switch
+        {
+            "google_invalid_client" =>
+                "Google OAuth client is invalid or was not found. Create a Web application OAuth client in Google Cloud, update Authentication:Google:ClientId and Authentication:Google:ClientSecret, then restart the app.",
+            "facebook" =>
+                "Facebook login is temporarily unavailable. Please use email login or try again later.",
+            _ =>
+                "Google login is temporarily unavailable. Please use email login or try again later."
+        };
+
     private bool HasProviderCredentials(string key1, string key2) =>
         !string.IsNullOrWhiteSpace(configuration[key1]) &&
         !string.IsNullOrWhiteSpace(configuration[key2]);
+
+    private async Task StoreGoogleTokensAsync(
+        ApplicationUser user,
+        ExternalLoginInfo info,
+        IReadOnlyCollection<AuthenticationToken> authenticationTokens)
+    {
+        if (!string.Equals(info.LoginProvider, GoogleProvider, StringComparison.OrdinalIgnoreCase) ||
+            authenticationTokens.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var token in authenticationTokens.Where(token => !string.IsNullOrWhiteSpace(token.Value)))
+        {
+            await users.SetAuthenticationTokenAsync(user, info.LoginProvider, token.Name, token.Value);
+        }
+    }
 
     private async Task<string> BuildExternalUserNameAsync(string email)
     {

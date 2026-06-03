@@ -17,6 +17,7 @@ public class InventoriesController(
     IAccessService access,
     IStatsService stats,
     ICustomIdService customIds,
+    ISupportTicketService supportTickets,
     UserManager<ApplicationUser> users,
     ILogger<InventoriesController> logger) : Controller
 {
@@ -95,6 +96,85 @@ public class InventoriesController(
 
     [Authorize]
     public IActionResult Create() => View(new InventoryFormViewModel());
+
+    [Authorize, HttpGet("Inventories/{id:int}/Help")]
+    public async Task<IActionResult> Help(int id)
+    {
+        var user = (await users.GetUserAsync(User))!;
+        var inventory = await db.Inventories.AsNoTracking().FirstOrDefaultAsync(i => i.Id == id);
+        if (inventory is null)
+        {
+            return NotFound();
+        }
+
+        var accessState = await access.GetAccessAsync(id, user);
+        if (!accessState.CanRead)
+        {
+            return Forbid();
+        }
+
+        return View(new SupportTicketViewModel
+        {
+            InventoryId = inventory.Id,
+            InventoryTitle = inventory.Title,
+            Priority = "Average"
+        });
+    }
+
+    [Authorize, HttpPost("Inventories/{id:int}/Help"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> Help(int id, SupportTicketViewModel model, CancellationToken cancellationToken)
+    {
+        var user = (await users.GetUserAsync(User))!;
+        var inventory = await db.Inventories.AsNoTracking().FirstOrDefaultAsync(i => i.Id == id);
+        if (inventory is null)
+        {
+            return NotFound();
+        }
+
+        var accessState = await access.GetAccessAsync(id, user);
+        if (!accessState.CanRead)
+        {
+            return Forbid();
+        }
+
+        model.InventoryId = inventory.Id;
+        model.InventoryTitle = inventory.Title;
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var link = Url.Action(nameof(Details), "Inventories", new { id = inventory.Id }, Request.Scheme)
+            ?? $"{Request.Scheme}://{Request.Host}/Inventories/Details/{inventory.Id}";
+
+        try
+        {
+            await supportTickets.SubmitAsync(new SupportTicketRequest(
+                ReportedBy: user.UserName ?? user.Email ?? user.Id,
+                ReportedByEmail: user.Email,
+                Inventory: inventory.Title,
+                Link: link,
+                Priority: model.Priority,
+                Summary: model.Summary), cancellationToken);
+        }
+        catch (SupportTicketException ex)
+        {
+            logger.LogWarning(ex, "Support ticket submission failed for InventoryId={InventoryId}", inventory.Id);
+            ModelState.AddModelError("", ex.Message);
+            AddGoogleDriveConsentLinkIfNeeded(ex, inventory.Id);
+            return View(model);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Unexpected support ticket submission failure for InventoryId={InventoryId}", inventory.Id);
+            ModelState.AddModelError("", "Support ticket could not be sent right now. Please try again later.");
+            return View(model);
+        }
+
+        TempData["Success"] = "Support ticket created. Admins will be notified shortly.";
+        return RedirectToAction(nameof(Details), new { id = inventory.Id });
+    }
 
     [Authorize, HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(InventoryFormViewModel model)
@@ -197,5 +277,17 @@ public class InventoriesController(
             ? $"{manageableIds.Length} inventory deleted."
             : "No inventory could be deleted.";
         return RedirectToAction(nameof(Index));
+    }
+
+    private void AddGoogleDriveConsentLinkIfNeeded(SupportTicketException exception, int inventoryId)
+    {
+        if (!string.Equals(exception.Message, GoogleDriveTicketUploadService.MissingOAuthTokenMessage, StringComparison.Ordinal) &&
+            !string.Equals(exception.Message, GoogleDriveTicketUploadService.ConsentRequiredMessage, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var returnUrl = Url.Action(nameof(Help), "Inventories", new { id = inventoryId }) ?? $"/Inventories/{inventoryId}/Help";
+        ViewBag.GoogleDriveConsentUrl = Url.Action("GoogleDriveConsent", "Account", new { returnUrl });
     }
 }

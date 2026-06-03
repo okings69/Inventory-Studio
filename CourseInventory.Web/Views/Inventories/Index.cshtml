@@ -80,6 +80,7 @@
                     <th>@T["Tags"]</th>
                     <th>@T["Access"]</th>
                     <th><button class="table-sort-button" type="button" data-sort="updated">@T["Updated"]</button></th>
+                    <th class="text-end">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -107,6 +108,12 @@
                         <td class="inventory-tags">@(!string.IsNullOrWhiteSpace(tags) ? tags : "-")</td>
                         <td><span class="access-badge @(item.IsPublic ? "is-public" : "is-private")">@(item.IsPublic ? T["Public"] : T["Private"])</span></td>
                         <td>@item.UpdatedAt.ToLocalTime().ToString("g")</td>
+                        <td class="text-end">
+                            <div class="inventory-row-actions">
+                                <a class="btn btn-outline-secondary btn-sm" asp-action="Details" asp-route-id="@item.Id">Open</a>
+                                <a class="btn btn-outline-primary btn-sm" asp-action="Help" asp-route-id="@item.Id">Help</a>
+                            </div>
+                        </td>
                     </tr>
                 }
                 </tbody>

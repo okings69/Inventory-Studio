@@ -1,0 +1,61 @@
+@model SupportTicketViewModel
+@{
+    ViewData["Title"] = "Help";
+}
+
+<section class="support-page-shell">
+    <div class="details-hero mb-4">
+        <div>
+            <p class="eyebrow mb-2">Support</p>
+            <h1>Help</h1>
+            <div class="details-meta">
+                <span>@Model.InventoryTitle</span>
+            </div>
+        </div>
+        <a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.InventoryId">Back to inventory</a>
+    </div>
+
+    <div class="form-card">
+        <form asp-action="Help" asp-route-id="@Model.InventoryId" method="post" class="needs-validation" novalidate>
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger auth-validation"></div>
+            @if (ViewBag.GoogleDriveConsentUrl is string googleDriveConsentUrl)
+            {
+                <div class="alert alert-info auth-validation">
+                    Google Drive permission is required before this support ticket can be uploaded.
+                    <a class="alert-link" href="@googleDriveConsentUrl">Connect Google Drive</a>
+                    and then send the request again.
+                </div>
+            }
+            <input type="hidden" asp-for="InventoryId" />
+            <input type="hidden" asp-for="InventoryTitle" />
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label" asp-for="Priority"></label>
+                    <select class="form-select" asp-for="Priority" required>
+                        <option value="Low">Low</option>
+                        <option value="Average">Average</option>
+                        <option value="High">High</option>
+                    </select>
+                    <span class="text-danger" asp-validation-for="Priority"></span>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label" asp-for="Summary"></label>
+                    <textarea class="form-control" asp-for="Summary" rows="7" maxlength="2000" required></textarea>
+                    <span class="text-danger" asp-validation-for="Summary"></span>
+                </div>
+
+                <div class="col-12 d-flex flex-wrap justify-content-end gap-2 pt-2">
+                    <a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.InventoryId">Cancel</a>
+                    <button class="btn btn-primary px-4" type="submit">Send help request</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

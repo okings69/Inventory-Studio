@@ -36,6 +36,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<Inventory>()
             .HasIndex(i => new { i.OwnerId, i.UpdatedAt });
 
+        builder.Entity<Inventory>()
+            .HasIndex(i => i.ApiTokenHash)
+            .IsUnique()
+            .HasFilter("\"ApiTokenHash\" IS NOT NULL");
+
         builder.Entity<InventoryItem>()
             .Property(i => i.RowVersion)
             .IsRowVersion();

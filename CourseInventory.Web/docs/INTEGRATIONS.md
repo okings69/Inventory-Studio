@@ -168,3 +168,74 @@ support-ticket-20260531-180000-a1b2c3d4.json
 - Upload fails with API errors: confirm Google Drive API is enabled in Google Cloud.
 - Apps Script does not process the file: confirm the script watches the same folder ID configured in Inventory Studio.
 - Never paste OAuth client secrets, refresh tokens, service account JSON, screenshots, Git commits, or regular `appsettings.json`.
+
+## Odoo Aggregate Viewer
+
+Inventory Studio exposes a read-only aggregate API for Odoo. Access is protected by an inventory-specific API token.
+
+### Inventory Studio Setup
+
+1. Open an inventory as owner or admin.
+2. Open the `API` tab.
+3. Click `Generate API token` or `Reset API token`.
+4. Copy the raw token immediately. It is shown only once.
+5. Use this endpoint in Odoo:
+
+   ```text
+   https://your-inventory-studio-host/api/inventories/aggregates
+   ```
+
+The token only grants read access to aggregate JSON for that one inventory. It cannot create, update, or delete items.
+
+### API Response
+
+```json
+{
+  "inventoryTitle": "Medical Equipment Inventory",
+  "fields": [
+    { "title": "Year", "type": "Number" }
+  ],
+  "numericAggregates": [
+    { "field": "Year", "min": 1994, "max": 2024, "average": 2010.5 }
+  ],
+  "textAggregates": [
+    {
+      "field": "Status",
+      "values": [
+        { "value": "Available", "count": 5 }
+      ]
+    }
+  ]
+}
+```
+
+### Odoo Module Setup
+
+The Odoo module is in:
+
+```text
+odoo/inventory_studio_viewer
+```
+
+1. Copy `inventory_studio_viewer` into an Odoo addons path.
+2. Restart Odoo.
+3. Update the Apps list.
+4. Install `Inventory Studio Viewer`.
+5. Open `Inventory Studio > Imported Inventories`.
+6. Create a record with:
+   - `Source URL`: `https://your-inventory-studio-host/api/inventories/aggregates`
+   - `API Token`: the token copied from Inventory Studio.
+7. Click `Import from Inventory Studio`.
+
+If Odoo runs in Docker, do not use `http://localhost:5158` unless Inventory Studio runs inside the same container. Use an address reachable from Odoo, such as `http://host.docker.internal:5158/api/inventories/aggregates` on Docker Desktop.
+
+### Odoo Demo Script
+
+1. Show that `/api/inventories/aggregates` without a token returns unauthorized.
+2. Generate the API token from the inventory page.
+3. Create an Odoo import record.
+4. Run `Import from Inventory Studio`.
+5. Show imported fields.
+6. Show numeric min/max/average aggregates.
+7. Show popular text values.
+8. Explain that Odoo is a read-only viewer and does not write back to Inventory Studio.

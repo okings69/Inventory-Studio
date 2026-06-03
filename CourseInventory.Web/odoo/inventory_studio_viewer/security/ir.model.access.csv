@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_inventory_studio_import_user,inventory.studio.import user,model_inventory_studio_import,base.group_user,1,1,1,1
+access_inventory_studio_field_user,inventory.studio.field user,model_inventory_studio_field,base.group_user,1,0,0,0
+access_inventory_studio_aggregate_user,inventory.studio.aggregate user,model_inventory_studio_aggregate,base.group_user,1,0,0,0

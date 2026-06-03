@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_inventory_studio_import_tree" model="ir.ui.view">
+        <field name="name">inventory.studio.import.tree</field>
+        <field name="model">inventory.studio.import</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="source_url"/>
+                <field name="imported_at"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_inventory_studio_import_form" model="ir.ui.view">
+        <field name="name">inventory.studio.import.form</field>
+        <field name="model">inventory.studio.import</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_import_results" type="object" string="Import from Inventory Studio" class="btn-primary"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="source_url"/>
+                        <field name="api_token" password="True"/>
+                        <field name="imported_at" readonly="1"/>
+                    </group>
+                    <notebook>
+                        <page string="Fields">
+                            <field name="field_ids" readonly="1">
+                                <tree>
+                                    <field name="title"/>
+                                    <field name="field_type"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Aggregates">
+                            <field name="aggregate_ids" readonly="1">
+                                <tree>
+                                    <field name="field_title"/>
+                                    <field name="aggregate_type"/>
+                                    <field name="value"/>
+                                    <field name="count"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_inventory_studio_import" model="ir.actions.act_window">
+        <field name="name">Inventory Studio</field>
+        <field name="res_model">inventory.studio.import</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem id="menu_inventory_studio_root" name="Inventory Studio"/>
+    <menuitem id="menu_inventory_studio_imports" name="Imported Inventories" parent="menu_inventory_studio_root" action="action_inventory_studio_import"/>
+</odoo>

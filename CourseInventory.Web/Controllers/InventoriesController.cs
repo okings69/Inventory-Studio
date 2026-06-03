@@ -18,6 +18,7 @@ public class InventoriesController(
     IStatsService stats,
     ICustomIdService customIds,
     ISupportTicketService supportTickets,
+    IInventoryApiTokenService apiTokens,
     UserManager<ApplicationUser> users,
     ILogger<InventoriesController> logger) : Controller
 {
@@ -219,6 +220,22 @@ public class InventoriesController(
             return Json(new { ok = result.Success, error = result.Error });
         TempData[result.Success ? "Success" : "Error"] = result.Error ?? "Saved.";
         return RedirectToAction(nameof(Details), new { id = model.Id });
+    }
+
+    [Authorize, HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> GenerateApiToken(int id, CancellationToken cancellationToken)
+    {
+        var actor = (await users.GetUserAsync(User))!;
+        var accessState = await access.GetAccessAsync(id, actor);
+        if (!accessState.CanManage)
+        {
+            return Forbid();
+        }
+
+        var token = await apiTokens.GenerateTokenAsync(id, cancellationToken);
+        TempData["ApiToken"] = token;
+        TempData["Success"] = "API token generated. Copy it now; it will not be shown again.";
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     [Authorize, HttpGet]

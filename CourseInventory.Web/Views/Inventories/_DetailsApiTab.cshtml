@@ -1,0 +1,60 @@
+@model InventoryDetailsViewModel
+@{
+    var inventory = Model.Inventory;
+    var endpoint = $"{Context.Request.Scheme}://{Context.Request.Host}/api/inventories/aggregates?token=YOUR_TOKEN";
+    var rawToken = TempData["ApiToken"] as string;
+}
+
+<section class="tab-pane fade" id="api">
+    <div class="panel details-panel">
+        <div class="panel-header">
+            <div>
+                <h2>API Token</h2>
+                <p>Use this token to let Odoo read aggregated results for this inventory only.</p>
+            </div>
+        </div>
+
+        <div class="p-3">
+            @if (!string.IsNullOrWhiteSpace(rawToken))
+            {
+                <div class="alert alert-warning">
+                    <strong>Copy this token now.</strong> It is shown only once.
+                    <pre class="mt-2 mb-0"><code>@rawToken</code></pre>
+                </div>
+            }
+
+            <div class="mb-3">
+                <label class="form-label">Endpoint URL</label>
+                <input class="form-control" value="@endpoint" readonly />
+            </div>
+
+            <div class="mb-3">
+                <div class="text-body-secondary small">Token status</div>
+                @if (string.IsNullOrWhiteSpace(inventory.ApiTokenHash))
+                {
+                    <strong>No API token has been generated yet.</strong>
+                }
+                else
+                {
+                    <strong>Token generated</strong>
+                    @if (inventory.ApiTokenCreatedAt is not null)
+                    {
+                        <span class="text-body-secondary">at @inventory.ApiTokenCreatedAt.Value.ToString("u")</span>
+                    }
+                }
+            </div>
+
+            <div class="alert alert-danger">
+                The API token is secret. Anyone with the token can read aggregate JSON for this inventory.
+                Reset the token if it was shared by mistake.
+            </div>
+
+            <form asp-action="GenerateApiToken" asp-route-id="@inventory.Id" method="post">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-primary" type="submit">
+                    @(string.IsNullOrWhiteSpace(inventory.ApiTokenHash) ? "Generate API token" : "Reset API token")
+                </button>
+            </form>
+        </div>
+    </div>
+</section>

@@ -166,6 +166,8 @@ builder.Services.AddScoped<ISupportTicketService, SupportTicketService>();
 builder.Services.AddScoped<IGoogleDriveTicketUploadService, GoogleDriveTicketUploadService>();
 builder.Services.AddScoped<IGoogleOAuthTokenProvider, GoogleOAuthTokenProvider>();
 builder.Services.AddScoped<IGoogleDriveFileUploader, GoogleDriveFileUploader>();
+builder.Services.AddScoped<IInventoryApiTokenService, InventoryApiTokenService>();
+builder.Services.AddScoped<IInventoryAggregateExportService, InventoryAggregateExportService>();
 
 var app = builder.Build();
 

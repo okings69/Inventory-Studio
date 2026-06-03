@@ -41,6 +41,11 @@ public class Inventory
 
     public bool IsPublic { get; set; }
 
+    [StringLength(128)]
+    public string? ApiTokenHash { get; set; }
+
+    public DateTime? ApiTokenCreatedAt { get; set; }
+
     [Timestamp]
     public uint RowVersion { get; set; }
 
